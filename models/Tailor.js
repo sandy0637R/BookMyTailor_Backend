@@ -8,8 +8,8 @@ const tailorSchema = new mongoose.Schema({
   experience: Number,
   specialization: String,
   fees: Number, 
-  topDesigns: [{ type: String }],
-  ratings: { type: Number, default: 0 },
+  topDesigns: [],
+  ratings: Number
 });
 
 module.exports = mongoose.model("Tailor", tailorSchema);
