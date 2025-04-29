@@ -2,20 +2,36 @@ const jwt = require("jsonwebtoken");
 const userModel = require("../models/User");
 
 module.exports = async function (req, res, next) {
-  if (!req.cookies.token) {
-    req.flash("error", "You need to login first");
-    return res.redirect("/");
+  let token;
+
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith("Bearer")
+  ) {
+    token = req.headers.authorization.split(" ")[1];
+  } else if (req.cookies && req.cookies.token) {
+    token = req.cookies.token;
+  }
+
+  if (!token) {
+    return res.status(401).json({ message: "Not authorized, token missing" });
   }
 
   try {
-    let decoded = jwt.verify(req.cookies.token, process.env.JWT_KEY);
-    let user = await userModel
+    const decoded = jwt.verify(token, process.env.JWT_KEY);
+
+    const user = await userModel
       .findOne({ email: decoded.email })
-      .select("-password"); //This will exclude the password from the data we are getting from the session of user
-    req.user = user;
+      .select("-password"); // Exclude password
+
+    if (!user) {
+      return res.status(401).json({ message: "User not found" });
+    }
+
+    req.user = user; // Attach user data to request
     next();
   } catch (err) {
-    req.flash("error", "something went wrong.");
-    res.redirect("/");
+    console.log(err.message);
+    return res.status(401).json({ message: "Token verification failed" });
   }
 };

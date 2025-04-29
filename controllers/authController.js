@@ -38,23 +38,54 @@ module.exports.registerUser = async function (req, res) {
 
 module.exports.loginUser = async function (req, res) {
   let { email, password } = req.body;
-  let user = await userModel.findOne({ email: email });
-  if (!user) {
-    return res.send("Email or Password incorrect.");
-  } else {
+  try {
+    let user = await userModel.findOne({ email: email });
+
+    if (!user) {
+      return res.status(404).json({ message: "Email not found." }); // Send 404 for email not found
+    }
+
+    // If user exists, compare password
     bcryptjs.compare(password, user.password, function (err, result) {
+      if (err) {
+        return res.status(500).json({ message: "Server error, please try again later." }); // Handle bcrypt error
+      }
+
       if (result) {
         let token = generateToken(user);
         res.cookie("token", token);
-        res.send("Login successfull !");
+        res.status(200).json({
+          message: "Login successful",
+          success: true,
+          token,
+          email,
+          name: user.name,
+        });
       } else {
-        res.status(401).send("Please enter the correct password !");
+        res.status(401).json({ message: "Incorrect password." }); // Send 401 for incorrect password
       }
     });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Internal server error." }); // Handle unexpected server error
   }
 };
+
 
 module.exports.logoutUser = function (res, req) {
   res.cookie("token", "");
   res.redirect("/");
+};
+
+module.exports.getProfile = async function (req, res) {
+  try {
+    const user = req.user; // The user is already attached to req.user by the authentication middleware
+    if (!user) {
+      return res.status(404).send("User not found.");
+    }
+    res.status(200).json(user); // Send the user profile data
+  } catch (err) {
+    console.log(err.message);
+    res.status(500).send("Server error.");
+  }
 };
