@@ -4,20 +4,23 @@ const {
   registerUser,
   loginUser,
   logoutUser,
-  getProfile,  // Import the getProfile function from authController
+  getProfile,
+  updateProfile,
 } = require("../controllers/authController");
 
-const isLoggedin = require("../middleware/isLoggedin"); // Import isLoggedin middleware
+const isLoggedin = require("../middleware/isLoggedin");
 
-router.get("/", function (req, res) {
+// Test Route
+router.get("/", (req, res) => {
   res.send("hey its working");
 });
 
+// Auth Routes
 router.post("/register", registerUser);
 router.post("/login", loginUser);
 router.get("/logout", logoutUser);
 
-// Profile route - requires the user to be logged in
+// Protected Routes
 router.get("/profile", isLoggedin, getProfile);
-
+router.put("/profile", isLoggedin, updateProfile); // Profile update route
 module.exports = router;
