@@ -5,8 +5,7 @@ const { generateToken } = require("../utils/generateToken");
 // Register User
 module.exports.registerUser = async function (req, res) {
   try {
-    let { name, email, password, wishlist, orders } = req.body;
-
+    const { name, email, password, wishlist, orders } = req.body;
     let user = await userModel.findOne({ email });
     if (user) {
       return res.status(401).send("User already exists, please login.");
@@ -16,11 +15,11 @@ module.exports.registerUser = async function (req, res) {
       bcryptjs.hash(password, salt, async function (err, hash) {
         if (err) return res.send(err.message);
 
-        let user = await userModel.create({
+        user = await userModel.create({
           name,
           email,
           password: hash,
-          role: "user", // Default role
+          roles: ["customer"], // Default role is Customer
           wishlist,
           orders,
         });
@@ -38,10 +37,9 @@ module.exports.registerUser = async function (req, res) {
 
 // Login User
 module.exports.loginUser = async function (req, res) {
-  let { email, password } = req.body;
+  const { email, password } = req.body;
   try {
-    let user = await userModel.findOne({ email });
-
+    const user = await userModel.findOne({ email });
     if (!user) {
       return res.status(404).json({ message: "Email not found." });
     }
@@ -52,7 +50,7 @@ module.exports.loginUser = async function (req, res) {
       }
 
       if (result) {
-        let token = generateToken(user);
+        const token = generateToken(user);
         res.cookie("token", token);
         res.status(200).json({
           message: "Login successful",
@@ -78,7 +76,7 @@ module.exports.getProfile = async function (req, res) {
     if (!user) {
       return res.status(404).send("User not found.");
     }
-    res.status(200).json(user); // Return the full user object
+    res.status(200).json(user); // Return full profile
   } catch (err) {
     console.log(err.message);
     res.status(500).send("Server error.");
@@ -88,24 +86,36 @@ module.exports.getProfile = async function (req, res) {
 // Update Profile
 module.exports.updateProfile = async function (req, res) {
   try {
-    const userId = req.user._id; // Use _id to find the user in the DB
-    const updates = req.body; // Accepts fields like name, role, etc.
+    const userId = req.user._id;
+    const updates = req.body;
+    const user = await userModel.findById(userId);
+    if (!user) return res.status(404).send("User not found.");
 
-    if (!updates.role && !updates.name) {
-      return res.status(400).json({ message: "No valid updates provided" });
+    // Ensure that roles field is initialized
+    if (!user.roles) user.roles = ["customer"]; // Default to "customer" if undefined
+
+    const incomingRoles = (updates.roles || updates.role || []).map(r => r.toLowerCase());
+    const isAddingTailor = incomingRoles.includes("tailor") && !user.roles.includes("tailor");
+
+    if (isAddingTailor) {
+      const { experience, specialization, fees } = updates.tailorDetails || {};
+      if (!experience || !specialization || !fees) {
+        return res.status(400).json({
+          message: "Tailor details must include experience, specialization, and fees.",
+        });
+      }
+      user.tailorDetails = updates.tailorDetails;
+      user.roles.push("tailor");  // Corrected to `roles` instead of `role`
     }
 
-    const updatedUser = await userModel.findByIdAndUpdate(userId, updates, {
-      new: true, // This ensures the updated document is returned
-    });
+    if (updates.name) user.name = updates.name;
+    if (updates.email) user.email = updates.email;
 
-    if (!updatedUser) {
-      return res.status(404).send("User not found.");
-    }
+    await user.save();
 
     res.status(200).json({
       message: "Profile updated successfully",
-      user: updatedUser, // Return the updated user object
+      user,
     });
   } catch (err) {
     console.error(err);

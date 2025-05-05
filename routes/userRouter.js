@@ -3,7 +3,7 @@ const router = express.Router();
 const {
   registerUser,
   loginUser,
-  logoutUser,
+  // logoutUser,
   getProfile,
   updateProfile,
 } = require("../controllers/authController");
@@ -18,7 +18,7 @@ router.get("/", (req, res) => {
 // Auth Routes
 router.post("/register", registerUser);
 router.post("/login", loginUser);
-router.get("/logout", logoutUser);
+// router.get("/logout", logoutUser);
 
 // Protected Routes
 router.get("/profile", isLoggedin, getProfile);
