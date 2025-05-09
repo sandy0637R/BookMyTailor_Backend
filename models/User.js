@@ -1,3 +1,4 @@
+module.exports = router;
 const mongoose = require("mongoose");
 
 const tailorDetailsSchema = new mongoose.Schema({
@@ -13,23 +14,27 @@ const userSchema = new mongoose.Schema({
   name: String,
   email: String,
   password: String,
-  roles: { // Changed "role" to "roles" for consistency
-    type: [String],  // Array of strings for multiple roles
-    enum: ["customer", "tailor"], // Now it can store multiple roles
-    default: ["customer"],  // Default role is "customer"
+  roles: {
+    type: [String],
+    enum: ["customer", "tailor"],
+    default: ["customer"],
   },
   wishlist: [],
   orders: [],
+  profileImage: {
+    type: String,           // Path to image file
+    default: "",            // Optional: empty string if no image uploaded
+  },
   tailorDetails: {
     type: tailorDetailsSchema,
     default: null,
   },
 });
 
-// Optional: Add a pre-save hook to nullify tailorDetails for non-tailors
+// Optional: Clear tailorDetails if not a tailor
 userSchema.pre("save", function (next) {
   if (!this.roles.includes("tailor")) {
-    this.tailorDetails = null;  // Clear tailor details if the user is not a tailor
+    this.tailorDetails = null;
   }
   next();
 });

@@ -3,9 +3,9 @@ const router = express.Router();
 const {
   registerUser,
   loginUser,
-  // logoutUser,
   getProfile,
   updateProfile,
+  uploadImage,
 } = require("../controllers/authController");
 
 const isLoggedin = require("../middleware/isLoggedin");
@@ -18,9 +18,9 @@ router.get("/", (req, res) => {
 // Auth Routes
 router.post("/register", registerUser);
 router.post("/login", loginUser);
-// router.get("/logout", logoutUser);
 
 // Protected Routes
 router.get("/profile", isLoggedin, getProfile);
-router.put("/profile", isLoggedin, updateProfile); // Profile update route
+router.put("/profile", isLoggedin, uploadImage, updateProfile); // ⬅️ Image upload + profile update
+
 module.exports = router;

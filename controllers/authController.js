@@ -1,124 +1,144 @@
-const userModel = require("../models/User");
-const bcryptjs = require("bcryptjs");
-const { generateToken } = require("../utils/generateToken");
+  const userModel = require("../models/User");
+  const bcryptjs = require("bcryptjs");
+  const { generateToken } = require("../utils/generateToken");
+  const multer = require("multer");
+  const path = require("path");
 
-// Register User
-module.exports.registerUser = async function (req, res) {
-  try {
-    const { name, email, password, wishlist, orders } = req.body;
-    let user = await userModel.findOne({ email });
-    if (user) {
-      return res.status(401).send("User already exists, please login.");
+  // Configure multer
+  const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+      cb(null, "uploads/");
+    },
+    filename: function (req, file, cb) {
+      cb(null, file.fieldname + "_" + Date.now() + path.extname(file.originalname));
     }
+  });
+  const upload = multer({ storage: storage });
 
-    bcryptjs.genSalt(10, function (err, salt) {
-      bcryptjs.hash(password, salt, async function (err, hash) {
-        if (err) return res.send(err.message);
+  // Register User
+  module.exports.registerUser = async function (req, res) {
+    try {
+      const { name, email, password, wishlist, orders } = req.body;
+      let user = await userModel.findOne({ email });
+      if (user) {
+        return res.status(401).send("User already exists, please login.");
+      }
 
-        user = await userModel.create({
-          name,
-          email,
-          password: hash,
-          roles: ["customer"], // Default role is Customer
-          wishlist,
-          orders,
+      bcryptjs.genSalt(10, function (err, salt) {
+        bcryptjs.hash(password, salt, async function (err, hash) {
+          if (err) return res.send(err.message);
+
+          user = await userModel.create({
+            name,
+            email,
+            password: hash,
+            roles: ["customer"],
+            wishlist,
+            orders,
+          });
+
+          let token = generateToken(user);
+          res.cookie("token", token);
+          res.status(201).send("User created successfully");
         });
-
-        let token = generateToken(user);
-        res.cookie("token", token);
-        res.status(201).send("User created successfully");
       });
-    });
-  } catch (err) {
-    console.log(err.message);
-    res.status(500).send("Internal server error.");
-  }
-};
-
-// Login User
-module.exports.loginUser = async function (req, res) {
-  const { email, password } = req.body;
-  try {
-    const user = await userModel.findOne({ email });
-    if (!user) {
-      return res.status(404).json({ message: "Email not found." });
+    } catch (err) {
+      console.log(err.message);
+      res.status(500).send("Internal server error.");
     }
+  };
 
-    bcryptjs.compare(password, user.password, function (err, result) {
-      if (err) {
-        return res.status(500).json({ message: "Server error, please try again later." });
+  // Login User
+  module.exports.loginUser = async function (req, res) {
+    const { email, password } = req.body;
+    try {
+      const user = await userModel.findOne({ email });
+      if (!user) {
+        return res.status(404).json({ message: "Email not found." });
       }
 
-      if (result) {
-        const token = generateToken(user);
-        res.cookie("token", token);
-        res.status(200).json({
-          message: "Login successful",
-          success: true,
-          token,
-          email,
-          name: user.name,
-        });
-      } else {
-        res.status(401).json({ message: "Incorrect password." });
-      }
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Internal server error." });
-  }
-};
+      bcryptjs.compare(password, user.password, function (err, result) {
+        if (err) {
+          return res.status(500).json({ message: "Server error, please try again later." });
+        }
 
-// Get Profile
-module.exports.getProfile = async function (req, res) {
-  try {
-    const user = req.user;
-    if (!user) {
-      return res.status(404).send("User not found.");
+        if (result) {
+          const token = generateToken(user);
+          res.cookie("token", token);
+          res.status(200).json({
+            message: "Login successful",
+            success: true,
+            token,
+            email,
+            name: user.name,
+          });
+        } else {
+          res.status(401).json({ message: "Incorrect password." });
+        }
+      });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "Internal server error." });
     }
-    res.status(200).json(user); // Return full profile
-  } catch (err) {
-    console.log(err.message);
-    res.status(500).send("Server error.");
-  }
-};
+  };
 
-// Update Profile
-module.exports.updateProfile = async function (req, res) {
-  try {
-    const userId = req.user._id;
-    const updates = req.body;
-    const user = await userModel.findById(userId);
-    if (!user) return res.status(404).send("User not found.");
-
-    // Ensure that roles field is initialized
-    if (!user.roles) user.roles = ["customer"]; // Default to "customer" if undefined
-
-    const incomingRoles = (updates.roles || updates.role || []).map(r => r.toLowerCase());
-    const isAddingTailor = incomingRoles.includes("tailor") && !user.roles.includes("tailor");
-
-    if (isAddingTailor) {
-      const { experience, specialization, fees } = updates.tailorDetails || {};
-      if (!experience || !specialization || !fees) {
-        return res.status(400).json({
-          message: "Tailor details must include experience, specialization, and fees.",
-        });
+  // Get Profile
+  module.exports.getProfile = async function (req, res) {
+    try {
+      const user = req.user;
+      if (!user) {
+        return res.status(404).send("User not found.");
       }
-      user.tailorDetails = updates.tailorDetails;
-      user.roles.push("tailor");  // Corrected to `roles` instead of `role`
+      res.status(200).json(user);
+    } catch (err) {
+      console.log(err.message);
+      res.status(500).send("Server error.");
     }
+  };
 
-    if (updates.name) user.name = updates.name;
-    if (updates.email) user.email = updates.email;
+  // Update Profile with optional image upload
+  module.exports.updateProfile = async function (req, res) {
+    try {
+      const userId = req.user._id;
+      const updates = req.body;
+      const user = await userModel.findById(userId);
+      if (!user) return res.status(404).send("User not found.");
 
-    await user.save();
+      if (!user.roles) user.roles = ["customer"];
 
-    res.status(200).json({
-      message: "Profile updated successfully",
-      user,
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).send("Server error.");
-  }
-};
+      const incomingRoles = (updates.roles || updates.role || []).map(r => r.toLowerCase());
+      const isAddingTailor = incomingRoles.includes("tailor") && !user.roles.includes("tailor");
+
+      if (isAddingTailor) {
+        const { experience, specialization, fees } = updates.tailorDetails || {};
+        if (!experience || !specialization || !fees) {
+          return res.status(400).json({
+            message: "Tailor details must include experience, specialization, and fees.",
+          });
+        }
+        user.tailorDetails = updates.tailorDetails;
+        user.roles.push("tailor");
+      }
+
+      if (updates.name) user.name = updates.name;
+      if (updates.email) user.email = updates.email;
+
+      // Handle profile image if uploaded
+      if (req.file) {
+        user.profileImage = req.file.path;
+      }
+
+      await user.save();
+
+      res.status(200).json({
+        message: "Profile updated successfully",
+        user,
+      });
+    } catch (err) {
+      console.error(err);
+      res.status(500).send("Server error.");
+    }
+  };
+
+  // ✅ Fixed uploadImage middleware
+  module.exports.uploadImage = upload.single("profileImage");
