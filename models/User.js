@@ -1,4 +1,3 @@
-module.exports = router;
 const mongoose = require("mongoose");
 
 const tailorDetailsSchema = new mongoose.Schema({
