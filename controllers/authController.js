@@ -86,6 +86,7 @@ module.exports.registerUser = async function (req, res) {
 
 
 // Login User
+// Login User
 module.exports.loginUser = async function (req, res) {
   const { email, password, role } = req.body;
 
@@ -98,12 +99,10 @@ module.exports.loginUser = async function (req, res) {
     const isAdminInDB = user.roles.includes("admin");
     const isAdminLogin = role === "admin";
 
-    // ✅ Enforce admin login rule
     if (isAdminInDB && !isAdminLogin) {
       return res.status(403).json({ message: "You are an admin. Please select 'Login as Admin'." });
     }
 
-    // ✅ Block normal users trying to login as admin
     if (!isAdminInDB && isAdminLogin) {
       return res.status(403).json({ message: "You are not an admin." });
     }
@@ -114,8 +113,10 @@ module.exports.loginUser = async function (req, res) {
       }
 
       if (result) {
-        const token = generateToken({ email: user.email, role: isAdminLogin ? "admin" : "customer" });
+        // Generate token with full user object and correct role string
+        const token = generateToken(user, user.roles[0]);
         res.cookie("token", token);
+
         res.status(200).json({
           message: "Login successful",
           success: true,
@@ -135,19 +136,23 @@ module.exports.loginUser = async function (req, res) {
 };
 
 
+
+
 // Get Profile
 module.exports.getProfile = async function (req, res) {
   try {
-    const user = req.user;
+    const user = await userModel.findById(req.user._id).select("-password");
     if (!user) {
       return res.status(404).send("User not found.");
     }
-    res.status(200).json(user);
+
+    return res.status(200).json(user);
   } catch (err) {
     console.log(err.message);
     res.status(500).send("Server error.");
   }
 };
+
 
 // Update Profile with optional image upload
 module.exports.updateProfile = async function (req, res) {

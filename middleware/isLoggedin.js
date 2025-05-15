@@ -15,22 +15,22 @@ module.exports = async function (req, res, next) {
   }
 
   try {
+    console.log("Token:", token);
     const decoded = jwt.verify(token, process.env.JWT_KEY);
+    console.log("Decoded token:", decoded);
 
-    const user = await userModel.findOne({ email: decoded.email }).select("-password");
+    const user = await userModel.findById(decoded._id).select("-password");
     if (!user) {
       return res.status(401).json({ message: "User not found" });
     }
 
-    // ✅ Strict role match: block admin if not logged in as admin
-    const isAdminInDB = user.roles.includes("admin");
-    const isAdminInToken = decoded.role === "admin";
+    const isAdminInDB = Array.isArray(user.roles) && user.roles.includes("admin");
+    const isAdminInToken = decoded.role && decoded.role === "admin";
 
     if (isAdminInDB && !isAdminInToken) {
       return res.status(403).json({ message: "Admin must login using admin mode." });
     }
 
-    // ✅ Block non-admins logging in as admin
     if (!isAdminInDB && isAdminInToken) {
       return res.status(403).json({ message: "You are not an admin." });
     }
@@ -38,7 +38,7 @@ module.exports = async function (req, res, next) {
     req.user = user;
     next();
   } catch (err) {
-    console.log(err.message);
+    console.log("Token verification error:", err.message);
     return res.status(401).json({ message: "Token verification failed" });
   }
 };

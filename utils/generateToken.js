@@ -1,13 +1,14 @@
 const jwt = require("jsonwebtoken");
 
-const generateToken = (user, role = "user") => {
+const generateToken = (user, userRole = "customer") => {
   return jwt.sign(
     {
       email: user.email,
-      id: user._id,
-      role, // ✅ include role in token payload
+      _id: user._id,     // ✅ correct key for token decoding
+      role: userRole,
     },
     process.env.JWT_KEY,
+    { expiresIn: "1d" }
   );
 };
 
