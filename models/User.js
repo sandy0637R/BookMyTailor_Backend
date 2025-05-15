@@ -2,12 +2,12 @@ const mongoose = require("mongoose");
 
 const tailorDetailsSchema = new mongoose.Schema({
   experience: Number,
-  specialization: [String], // e.g., ["Traditional", "Western"]
+  specialization: [String],
   fees: Number,
-  topDesigns: [String],     // URLs or image references
+  topDesigns: [String],
   ratings: Number,
-  posts: [String],          // Post IDs or content references
-}, { _id: false });          // No need for separate _id for sub-doc
+  posts: [String],
+}, { _id: false });
 
 const userSchema = new mongoose.Schema({
   name: String,
@@ -15,14 +15,22 @@ const userSchema = new mongoose.Schema({
   password: String,
   roles: {
     type: [String],
-    enum: ["customer", "tailor"],
+    enum: ["customer", "tailor", "admin"],
     default: ["customer"],
+    validate: {
+      validator: function (roles) {
+        // If admin, it must be the only role
+        if (roles.includes("admin") && roles.length > 1) return false;
+        return true;
+      },
+      message: "Admin cannot have other roles."
+    }
   },
   wishlist: [],
   orders: [],
   profileImage: {
-    type: String,           // Path to image file
-    default: "",            // Optional: empty string if no image uploaded
+    type: String,
+    default: "",
   },
   tailorDetails: {
     type: tailorDetailsSchema,
@@ -30,7 +38,7 @@ const userSchema = new mongoose.Schema({
   },
 });
 
-// Optional: Clear tailorDetails if not a tailor
+// Auto-remove tailorDetails if not a tailor
 userSchema.pre("save", function (next) {
   if (!this.roles.includes("tailor")) {
     this.tailorDetails = null;

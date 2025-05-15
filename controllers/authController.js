@@ -19,43 +19,93 @@ const upload = multer({ storage: storage });
 // Register User
 module.exports.registerUser = async function (req, res) {
   try {
-    const { name, email, password, wishlist, orders } = req.body;
+    let { name, email, password, wishlist, orders, roles = ["customer"] } = req.body;  // Change to 'let' for roles
+    console.log("Request Body:", req.body);  // Log the incoming request body
+
+    // If admin is selected, check if an admin already exists
+    if (roles.includes("admin")) {
+      console.log("Checking for existing admin...");
+      const existingAdmin = await userModel.findOne({ roles: "admin" });
+      if (existingAdmin) {
+        return res.status(403).send("Admin already exists.");
+      }
+
+      // Ensure only 'admin' role is assigned if 'admin' is selected
+      if (roles.length > 1) {
+        return res.status(400).send("Admin cannot have other roles.");
+      }
+
+      console.log("Assigning admin role...");
+      roles = ["admin"]; // Now you can safely reassign roles
+    }
+
+    // Check if the user already exists by email
     let user = await userModel.findOne({ email });
     if (user) {
       return res.status(401).send("User already exists, please login.");
     }
 
+    console.log("Hashing the password...");
     bcryptjs.genSalt(10, function (err, salt) {
-      bcryptjs.hash(password, salt, async function (err, hash) {
-        if (err) return res.send(err.message);
+      if (err) {
+        console.log("Error generating salt:", err.message);
+        return res.status(500).send("Error generating salt.");
+      }
 
+      bcryptjs.hash(password, salt, async function (err, hash) {
+        if (err) {
+          console.log("Error hashing password:", err.message);
+          return res.status(500).send("Error hashing password.");
+        }
+
+        console.log("Password hashed successfully. Creating user...");
         user = await userModel.create({
           name,
           email,
           password: hash,
-          roles: ["customer"],
+          roles,    // Store the roles in the user document
           wishlist,
           orders,
         });
 
+        // Generate the token for the new user
         let token = generateToken(user);
         res.cookie("token", token);
         res.status(201).send("User created successfully");
       });
     });
   } catch (err) {
-    console.log(err.message);
+    console.log("Error during registration:", err.message);
     res.status(500).send("Internal server error.");
   }
 };
 
+
+
+
+
+
 // Login User
 module.exports.loginUser = async function (req, res) {
-  const { email, password } = req.body;
+  const { email, password, role } = req.body;
+
   try {
     const user = await userModel.findOne({ email });
     if (!user) {
       return res.status(404).json({ message: "Email not found." });
+    }
+
+    const isAdminInDB = user.roles.includes("admin");
+    const isAdminLogin = role === "admin";
+
+    // ✅ Enforce admin login rule
+    if (isAdminInDB && !isAdminLogin) {
+      return res.status(403).json({ message: "You are an admin. Please select 'Login as Admin'." });
+    }
+
+    // ✅ Block normal users trying to login as admin
+    if (!isAdminInDB && isAdminLogin) {
+      return res.status(403).json({ message: "You are not an admin." });
     }
 
     bcryptjs.compare(password, user.password, function (err, result) {
@@ -64,7 +114,7 @@ module.exports.loginUser = async function (req, res) {
       }
 
       if (result) {
-        const token = generateToken(user);
+        const token = generateToken({ email: user.email, role: isAdminLogin ? "admin" : "customer" });
         res.cookie("token", token);
         res.status(200).json({
           message: "Login successful",
@@ -72,6 +122,7 @@ module.exports.loginUser = async function (req, res) {
           token,
           email,
           name: user.name,
+          roles: user.roles,
         });
       } else {
         res.status(401).json({ message: "Incorrect password." });
@@ -82,6 +133,7 @@ module.exports.loginUser = async function (req, res) {
     res.status(500).json({ message: "Internal server error." });
   }
 };
+
 
 // Get Profile
 module.exports.getProfile = async function (req, res) {
@@ -177,3 +229,14 @@ module.exports.deleteProfileImage = async function (req, res) {
 
 // ✅ Fixed uploadImage middleware
 module.exports.uploadImage = upload.single("profileImage");
+
+module.exports.checkAdmin = async function (req,res){
+  try {
+    console.log("Checking for admin...");
+    const admin = await userModel.findOne({ roles: "admin" });
+    res.json({ exists: !!admin });
+  } catch (err) {
+    console.error(err); // Show actual error in terminal
+    res.status(500).json({ error: "Server error" });
+  }
+}

@@ -18,9 +18,21 @@ module.exports = async function (req, res, next) {
     const decoded = jwt.verify(token, process.env.JWT_KEY);
 
     const user = await userModel.findOne({ email: decoded.email }).select("-password");
-
     if (!user) {
       return res.status(401).json({ message: "User not found" });
+    }
+
+    // ✅ Strict role match: block admin if not logged in as admin
+    const isAdminInDB = user.roles.includes("admin");
+    const isAdminInToken = decoded.role === "admin";
+
+    if (isAdminInDB && !isAdminInToken) {
+      return res.status(403).json({ message: "Admin must login using admin mode." });
+    }
+
+    // ✅ Block non-admins logging in as admin
+    if (!isAdminInDB && isAdminInToken) {
+      return res.status(403).json({ message: "You are not an admin." });
     }
 
     req.user = user;

@@ -6,7 +6,8 @@ const {
   getProfile,
   updateProfile,
   uploadImage,
-  deleteProfileImage, // New method for deleting profile image
+  deleteProfileImage,
+  checkAdmin, // New method for deleting profile image
 } = require("../controllers/authController");
 
 const isLoggedin = require("../middleware/isLoggedin");
@@ -26,5 +27,10 @@ router.put("/profile", isLoggedin, uploadImage, updateProfile); // ⬅️ Image 
 
 // Route to delete profile image
 router.delete("/profile/image", isLoggedin, deleteProfileImage); // Route to handle profile image deletion
+
+// GET /users/admin-exists
+router.get("/admin-exists",checkAdmin);
+
+
 
 module.exports = router;
