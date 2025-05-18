@@ -1,12 +1,13 @@
 const mongoose = require("mongoose");
-
+const postSchema=require("./Post");
+const PostSchema = require("./Post");
 const tailorDetailsSchema = new mongoose.Schema({
   experience: Number,
   specialization: [String],
   fees: Number,
   topDesigns: [String],
   ratings: Number,
-  posts: [String],
+  posts: [PostSchema],
 }, { _id: false });
 
 const userSchema = new mongoose.Schema({

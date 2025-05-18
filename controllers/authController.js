@@ -1,45 +1,40 @@
 const userModel = require("../models/User");
 const bcryptjs = require("bcryptjs");
 const { generateToken } = require("../utils/generateToken");
-const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
+const postService=require("./postService")
 
-// Configure multer
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, "uploads/");
-  },
-  filename: function (req, file, cb) {
-    cb(null, file.fieldname + "_" + Date.now() + path.extname(file.originalname));
-  }
-});
-const upload = multer({ storage: storage });
+const { createProfileImageUpload, createPostImageUpload } = require("../middleware/multerConfig");
+
+
+// Multer middleware setup
+const uploadImage = createProfileImageUpload();
+const uploadPostImages = createPostImageUpload();
+
+module.exports.uploadImage = uploadImage.single("profileImage");
+module.exports.uploadPostImages = uploadPostImages.array("images", 5);
 
 // Register User
 module.exports.registerUser = async function (req, res) {
   try {
-    let { name, email, password, wishlist, orders, roles = ["customer"] } = req.body;  // Change to 'let' for roles
-    console.log("Request Body:", req.body);  // Log the incoming request body
+    let { name, email, password, wishlist, orders, roles = ["customer"] } = req.body;
 
-    // If admin is selected, check if an admin already exists
+    console.log("Request Body:", req.body);
+
     if (roles.includes("admin")) {
       console.log("Checking for existing admin...");
       const existingAdmin = await userModel.findOne({ roles: "admin" });
       if (existingAdmin) {
         return res.status(403).send("Admin already exists.");
       }
-
-      // Ensure only 'admin' role is assigned if 'admin' is selected
       if (roles.length > 1) {
         return res.status(400).send("Admin cannot have other roles.");
       }
-
       console.log("Assigning admin role...");
-      roles = ["admin"]; // Now you can safely reassign roles
+      roles = ["admin"];
     }
 
-    // Check if the user already exists by email
     let user = await userModel.findOne({ email });
     if (user) {
       return res.status(401).send("User already exists, please login.");
@@ -63,12 +58,11 @@ module.exports.registerUser = async function (req, res) {
           name,
           email,
           password: hash,
-          roles,    // Store the roles in the user document
+          roles,
           wishlist,
           orders,
         });
 
-        // Generate the token for the new user
         let token = generateToken(user);
         res.cookie("token", token);
         res.status(201).send("User created successfully");
@@ -80,12 +74,6 @@ module.exports.registerUser = async function (req, res) {
   }
 };
 
-
-
-
-
-
-// Login User
 // Login User
 module.exports.loginUser = async function (req, res) {
   const { email, password, role } = req.body;
@@ -113,7 +101,6 @@ module.exports.loginUser = async function (req, res) {
       }
 
       if (result) {
-        // Generate token with full user object and correct role string
         const token = generateToken(user, user.roles[0]);
         res.cookie("token", token);
 
@@ -135,9 +122,6 @@ module.exports.loginUser = async function (req, res) {
   }
 };
 
-
-
-
 // Get Profile
 module.exports.getProfile = async function (req, res) {
   try {
@@ -145,14 +129,12 @@ module.exports.getProfile = async function (req, res) {
     if (!user) {
       return res.status(404).send("User not found.");
     }
-
     return res.status(200).json(user);
   } catch (err) {
     console.log(err.message);
     res.status(500).send("Server error.");
   }
 };
-
 
 // Update Profile with optional image upload
 module.exports.updateProfile = async function (req, res) {
@@ -178,22 +160,16 @@ module.exports.updateProfile = async function (req, res) {
       user.roles.push("tailor");
     }
 
-    if (updates.name) user.name = updates.name;
-    if (updates.email) user.email = updates.email;
-
-    // Handle profile image if uploaded
     if (req.file) {
       if (user.profileImage) {
-        // If there's an existing image, delete it
         const oldImagePath = path.join(__dirname, "..", user.profileImage);
-        if (fs.existsSync(oldImagePath)) {
-          fs.unlinkSync(oldImagePath);
-        }
+        if (fs.existsSync(oldImagePath)) fs.unlinkSync(oldImagePath);
       }
-
-      const profileImagePath = req.file.path.replace(/\\/g, '/');
-      user.profileImage = profileImagePath;
+      user.profileImage = req.file.path.replace(/\\/g, "/");
     }
+
+    if (updates.name) user.name = updates.name;
+    if (updates.email) user.email = updates.email;
 
     await user.save();
 
@@ -217,8 +193,8 @@ module.exports.deleteProfileImage = async function (req, res) {
     if (user.profileImage) {
       const imagePath = path.join(__dirname, "..", user.profileImage);
       if (fs.existsSync(imagePath)) {
-        fs.unlinkSync(imagePath); // Delete the image file
-        user.profileImage = null; // Remove the image reference from the user object
+        fs.unlinkSync(imagePath);
+        user.profileImage = null;
         await user.save();
         return res.status(200).send("Profile image deleted successfully.");
       }
@@ -232,16 +208,77 @@ module.exports.deleteProfileImage = async function (req, res) {
   }
 };
 
-// ✅ Fixed uploadImage middleware
-module.exports.uploadImage = upload.single("profileImage");
-
-module.exports.checkAdmin = async function (req,res){
+// Check if admin exists
+module.exports.checkAdmin = async function (req, res) {
   try {
     console.log("Checking for admin...");
     const admin = await userModel.findOne({ roles: "admin" });
     res.json({ exists: !!admin });
   } catch (err) {
-    console.error(err); // Show actual error in terminal
+    console.error(err);
     res.status(500).json({ error: "Server error" });
   }
-}
+};
+
+// Post-related controllers
+
+// Add Post
+module.exports.addPost = async function (req, res) {
+  try {
+    const userId = req.user._id;
+    const postData = req.body;
+
+    // Pass full file objects, not only paths
+    const images = req.files && req.files.length > 0 ? req.files : [];
+
+    const result = await postService.addPost(userId, postData, images);
+    res.status(201).json({ message: "Post created", post: result });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Server error");
+  }
+};
+
+// Update Post
+module.exports.updatePost = async function (req, res) {
+  try {
+    const userId = req.user._id;
+    const postId = req.params.postId;
+    const updateData = req.body;
+
+    // Pass full file objects, not only paths
+    const images = req.files && req.files.length > 0 ? req.files : [];
+
+    const result = await postService.updatePost(userId, postId, updateData, images);
+    res.status(200).json({ message: "Post updated", post: result });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Server error");
+  }
+};
+
+
+module.exports.deletePost = async function (req, res) {
+  try {
+    const userId = req.user._id;
+    const postId = req.params.postId;
+    await postService.deletePost(userId, postId);
+    res.status(200).json({ message: "Post deleted" });
+  } catch (err) {
+    console.error("Delete post error:", err);
+    res.status(500).json({ error: err.message || "Unknown error" });
+  }
+};
+
+
+
+module.exports.getAllPosts = async function (req, res) {
+  try {
+    const userId = req.user._id;
+    const posts = await postService.getAllPosts(userId);
+    res.status(200).json(posts);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Server error");
+  }
+};

@@ -8,6 +8,11 @@ const {
   uploadImage,
   deleteProfileImage,
   checkAdmin, // New method for deleting profile image
+  addPost,
+  updatePost,
+  deletePost,
+  uploadPostImages,
+  getAllPosts,
 } = require("../controllers/authController");
 
 const isLoggedin = require("../middleware/isLoggedin");
@@ -32,5 +37,9 @@ router.delete("/profile/image", isLoggedin, deleteProfileImage); // Route to han
 router.get("/admin-exists",checkAdmin);
 
 
+router.post("/post", isLoggedin, uploadPostImages, addPost);
+router.put("/post/:postId", isLoggedin, uploadPostImages, updatePost);
+router.delete("/post/:postId", isLoggedin, deletePost);
+router.get("/posts", isLoggedin, getAllPosts);
 
 module.exports = router;
