@@ -1,4 +1,4 @@
-// multerConfig.js (example)
+// multerConfig.js
 const multer = require('multer');
 const path = require('path');
 
@@ -27,6 +27,9 @@ function createPostImageUpload() {
 
   return multer({ storage: storage });
 }
+
+// ✅ Expose 'uploads' directory globally in main server file (for example in server.js or app.js):
+// app.use('/uploads', express.static('uploads'));
 
 module.exports = {
   createProfileImageUpload,
