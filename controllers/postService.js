@@ -74,4 +74,98 @@ async function getAllPosts(userId) {
   return user.tailorDetails.posts;
 }
 
-module.exports = { addPost, updatePost, deletePost, getAllPosts };
+async function toggleLike(userId, postId) {
+  const user = await User.findOne({ "tailorDetails.posts._id": postId });
+  if (!user) throw new Error("Post not found");
+
+  const post = user.tailorDetails.posts.id(postId);
+  if (!post) throw new Error("Post not found");
+
+  // Make sure userId and like ids are strings before comparison
+  const likeIndex = post.likes.findIndex(
+    (id) => id.toString() === userId.toString()
+  );
+
+  if (likeIndex === -1) {
+    // Add like
+    post.likes.push(userId);
+  } else {
+    // Remove like
+    post.likes.splice(likeIndex, 1);
+  }
+
+  await user.save();
+  return post;
+}
+
+
+
+
+// Add comment to a post
+
+
+async function addComment(userId, postId, text) {
+  const user = await User.findOne({ "tailorDetails.posts._id": postId });
+  if (!user) throw new Error("Post not found");
+
+  const post = user.tailorDetails.posts.id(postId);
+  if (!post) throw new Error("Post not found");
+
+  post.comments.push({ userId: new mongoose.Types.ObjectId(userId), commentText: text });
+  await user.save();
+  return post;
+}
+
+
+
+// Get all comments for a post
+async function getAllComments(postId) {
+  const user = await User.findOne({ "tailorDetails.posts._id": postId });
+  if (!user) throw new Error("Post not found");
+
+  const post = user.tailorDetails.posts.id(postId);
+  if (!post) throw new Error("Post not found");
+
+  const populatedComments = await Promise.all(
+    post.comments.map(async (comment) => {
+      const userInfo = await User.findById(comment.userId).select("name");
+      return {
+        _id: comment._id,
+        commentText: comment.commentText,
+        userId: comment.userId,
+        userName: userInfo?.name || "Unknown",
+        createdAt: comment.createdAt,
+      };
+    })
+  );
+
+  return populatedComments;
+}
+
+
+// Delete a comment by commentId
+async function deleteComment(postId, commentId, userId) {
+  const user = await User.findOne({ "tailorDetails.posts._id": postId });
+  if (!user) throw new Error("Post not found");
+
+  const post = user.tailorDetails.posts.id(postId);
+  if (!post) throw new Error("Post not found");
+
+  const comment = post.comments.id(commentId);
+  if (!comment) throw new Error("Comment not found");
+
+  // Optional: Only allow the comment author to delete
+  if (comment.userId.toString() !== userId.toString()) {
+    throw new Error("Not authorized to delete this comment");
+  }
+
+  comment.deleteOne();
+  await user.save();
+
+  return true;
+}
+
+module.exports = {
+  addPost, updatePost, deletePost, getAllPosts, toggleLike, addComment,
+  getAllComments, deleteComment,
+};

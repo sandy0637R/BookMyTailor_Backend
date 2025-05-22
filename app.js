@@ -19,7 +19,15 @@ app.use(cors({
   credentials: true,  // Allow cookies/credentials to be sent
 }));
 
-app.use(express.json());
+// Skip JSON parsing for GET and DELETE requests to avoid JSON parse errors
+app.use((req, res, next) => {
+  if (req.method === "GET" || req.method === "DELETE") {
+    next();
+  } else {
+    express.json()(req, res, next);
+  }
+});
+
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(
@@ -31,7 +39,6 @@ app.use(
 );
 app.use(flash());
 app.use(express.static(path.join(__dirname, "public")));
-
 
 app.set("view engine", "ejs");
 app.use('/uploads', express.static('uploads'));
