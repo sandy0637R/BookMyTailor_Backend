@@ -1,14 +1,17 @@
 const mongoose = require("mongoose");
-const postSchema=require("./Post");
 const PostSchema = require("./Post");
-const tailorDetailsSchema = new mongoose.Schema({
-  experience: Number,
-  specialization: [String],
-  fees: Number,
-  topDesigns: [String],
-  ratings: Number,
-  posts: [PostSchema],
-}, { _id: false });
+const tailorDetailsSchema = new mongoose.Schema(
+  {
+    experience: Number,
+    specialization: [String],
+    fees: Number,
+    topDesigns: [String],
+    ratings: Number,
+    posts: [PostSchema],
+    description: String,
+  },
+  { _id: false }
+);
 
 const userSchema = new mongoose.Schema({
   name: String,
@@ -24,8 +27,8 @@ const userSchema = new mongoose.Schema({
         if (roles.includes("admin") && roles.length > 1) return false;
         return true;
       },
-      message: "Admin cannot have other roles."
-    }
+      message: "Admin cannot have other roles.",
+    },
   },
   wishlist: [],
   orders: [],
@@ -33,6 +36,7 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: "",
   },
+  address: String,
   tailorDetails: {
     type: tailorDetailsSchema,
     default: null,

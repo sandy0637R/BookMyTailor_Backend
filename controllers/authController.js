@@ -150,15 +150,22 @@ module.exports.updateProfile = async function (req, res) {
     const isAddingTailor = incomingRoles.includes("tailor") && !user.roles.includes("tailor");
 
     if (isAddingTailor) {
-      const { experience, specialization, fees } = updates.tailorDetails || {};
-      if (!experience || !specialization || !fees) {
-        return res.status(400).json({
-          message: "Tailor details must include experience, specialization, and fees.",
-        });
-      }
-      user.tailorDetails = updates.tailorDetails;
-      user.roles.push("tailor");
-    }
+  const { experience, specialization, fees } = updates.tailorDetails || {};
+  if (!experience || !specialization || !fees) {
+    return res.status(400).json({
+      message: "Tailor details must include experience, specialization, and fees.",
+    });
+  }
+  user.tailorDetails = updates.tailorDetails;
+  user.roles.push("tailor");
+} else if (user.roles.includes("tailor") && updates.tailorDetails) {
+  // ✅ update tailorDetails if already a tailor
+  user.tailorDetails = {
+    ...user.tailorDetails,
+    ...updates.tailorDetails,
+  };
+}
+
 
     if (req.file) {
       if (user.profileImage) {
@@ -170,6 +177,7 @@ module.exports.updateProfile = async function (req, res) {
 
     if (updates.name) user.name = updates.name;
     if (updates.email) user.email = updates.email;
+    if (updates.address) user.address=updates.address;
 
     await user.save();
 
