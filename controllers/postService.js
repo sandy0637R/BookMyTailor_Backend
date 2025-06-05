@@ -145,25 +145,32 @@ async function getAllComments(postId) {
 
 // Delete a comment by commentId
 async function deleteComment(postId, commentId, userId) {
+  // 1. Find user with tailorDetails & posts
   const user = await User.findOne({ "tailorDetails.posts._id": postId });
-  if (!user) throw new Error("Post not found");
+  if (!user || !user.tailorDetails) throw new Error("Post not found or tailor details missing");
 
+  // 2. Find post by id safely
   const post = user.tailorDetails.posts.id(postId);
   if (!post) throw new Error("Post not found");
 
+  // 3. Find comment by id safely
   const comment = post.comments.id(commentId);
   if (!comment) throw new Error("Comment not found");
 
-  // Optional: Only allow the comment author to delete
+  // 4. Check ownership
   if (comment.userId.toString() !== userId.toString()) {
     throw new Error("Not authorized to delete this comment");
   }
 
-  comment.deleteOne();
+  // 5. Await deleteOne to ensure deletion completes
+  await comment.deleteOne();
+
+  // 6. Save user document after removal
   await user.save();
 
   return true;
 }
+
 
 module.exports = {
   addPost, updatePost, deletePost, getAllPosts, toggleLike, addComment,

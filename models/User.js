@@ -1,14 +1,32 @@
 const mongoose = require("mongoose");
 const PostSchema = require("./Post");
+
+const ratingSchema = new mongoose.Schema(
+  {
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    rating: { type: Number, min: 1, max: 5 },
+  },
+  { _id: false }
+);
+
 const tailorDetailsSchema = new mongoose.Schema(
   {
     experience: Number,
     specialization: [String],
     fees: Number,
     topDesigns: [String],
-    ratings: Number,
     posts: [PostSchema],
     description: String,
+    followers: [
+      {
+        _id: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+        },
+        name: String,
+      },
+    ],
+    averageRating: { type: Number, default: 0 },
   },
   { _id: false }
 );
