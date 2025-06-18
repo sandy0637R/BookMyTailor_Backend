@@ -49,6 +49,7 @@ const userSchema = new mongoose.Schema({
     },
   },
   wishlist: [],
+  cart:[],
   orders: [],
   profileImage: {
     type: String,

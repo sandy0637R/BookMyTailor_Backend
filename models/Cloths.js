@@ -1,12 +1,13 @@
 const mongoose = require("mongoose");
 
 const clothSchema = new mongoose.Schema({
-  name: String,
-  category: String,
-  sizes: [String],
-  price: Number,
-  tailorId: { type: mongoose.Schema.Types.ObjectId, ref: "Tailor" },
-  image: String,
+  name: { type: String, required: true },
+  type: { type: String, required: true },
+  manufacturer: { type: String },
+  size: { type: [String], default: ["S", "M", "L", "XL"] },
+  gender: { type: String, enum: ["Male", "Female", "Unisex"], required: true },
+  price: { type: Number, required: true },
+  image: { type: String,required: true },
 });
 
 module.exports = mongoose.model("Cloth", clothSchema);
