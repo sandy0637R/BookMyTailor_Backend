@@ -48,8 +48,9 @@ const userSchema = new mongoose.Schema({
       message: "Admin cannot have other roles.",
     },
   },
-  wishlist: [],
-  cart:[],
+  wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: "Cloth" }],
+cart: [{ type: mongoose.Schema.Types.ObjectId, ref: "Cloth" }],
+
   orders: [],
   profileImage: {
     type: String,

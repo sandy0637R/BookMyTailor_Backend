@@ -13,6 +13,10 @@ const {
   deletePost,
   uploadPostImages,
   getAllPosts,
+  addToWishlist,
+  removeFromWishlist,
+  addToCart,
+  removeFromCart,
 } = require("../controllers/authController");
 
 const isLoggedin = require("../middleware/isLoggedin");
@@ -41,5 +45,13 @@ router.post("/post", isLoggedin, uploadPostImages, addPost);
 router.put("/post/:postId", isLoggedin, uploadPostImages, updatePost);
 router.delete("/post/:postId", isLoggedin, deletePost);
 router.get("/posts", isLoggedin, getAllPosts);
+
+router.post("/wishlist", isLoggedin, addToWishlist); // expects { itemId } in body
+router.delete("/wishlist/:itemId", isLoggedin, removeFromWishlist);
+
+// ✅ Cart routes — match frontend (POST with body, DELETE with param)
+router.post("/cart", isLoggedin, addToCart); // expects { itemId } in body
+router.delete("/cart/:itemId", isLoggedin, removeFromCart);        // Fro
+
 
 module.exports = router;

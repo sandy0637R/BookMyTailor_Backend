@@ -290,3 +290,86 @@ module.exports.getAllPosts = async function (req, res) {
     res.status(500).send("Server error");
   }
 };
+
+exports.addToWishlist = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { itemId } = req.body;
+
+    if (!itemId) return res.status(400).json({ message: "Item ID is required" });
+
+    const user = await userModel.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (user.wishlist.includes(itemId)) {
+      return res.status(400).json({ message: "Item already in wishlist" });
+    }
+
+    user.wishlist.push(itemId);
+    await user.save();
+
+    res.status(200).json({ success: true, message: "Item added to wishlist", wishlist: user.wishlist });
+  } catch (err) {
+    console.error("Error in addToWishlist:", err);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+
+
+exports.removeFromWishlist = async (req, res) => {
+  try {
+    const user = await userModel.findById(req.user._id);
+    const itemId = req.params.itemId;
+
+    user.wishlist = user.wishlist.filter(id => id.toString() !== itemId);
+    await user.save();
+
+    res.status(200).json({ message: "Removed from wishlist", wishlist: user.wishlist });
+  } catch (err) {
+    console.error("Error in removeFromWishlist:", err);
+    res.status(500).send("Server error");
+  }
+};
+
+exports.addToCart = async (req, res) => {
+  try {
+    const user = await userModel.findById(req.user._id);
+    const { itemId } = req.body;
+
+    if (!itemId) return res.status(400).json({ message: "Item ID is required" });
+
+    // Add to cart if not already there
+    if (!user.cart.includes(itemId)) {
+      user.cart.push(itemId);
+    }
+
+    // ✅ Remove from wishlist if present
+    user.wishlist = user.wishlist.filter(id => id.toString() !== itemId);
+
+    await user.save();
+
+    res.status(200).json({ message: "Added to cart", cart: user.cart, wishlist: user.wishlist });
+  } catch (err) {
+    console.error("Error in addToCart:", err);
+    res.status(500).send("Server error");
+  }
+};
+
+
+
+exports.removeFromCart = async (req, res) => {
+  try {
+    const user = await userModel.findById(req.user._id);
+    const itemId = req.params.itemId;
+
+    user.cart = user.cart.filter(id => id.toString() !== itemId);
+    await user.save();
+
+    res.status(200).json({ message: "Removed from cart", cart: user.cart });
+  } catch (err) {
+    console.error("Error in removeFromCart:", err);
+    res.status(500).send("Server error");
+  }
+};
+
