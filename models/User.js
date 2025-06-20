@@ -1,13 +1,7 @@
 const mongoose = require("mongoose");
 const PostSchema = require("./Post");
-
-const ratingSchema = new mongoose.Schema(
-  {
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-    rating: { type: Number, min: 1, max: 5 },
-  },
-  { _id: false }
-);
+const customRequestSchema = require("./CustomerRequest");
+const acceptedRequestSchema = require("./TailorsAcceptedReq");
 
 const tailorDetailsSchema = new mongoose.Schema(
   {
@@ -27,6 +21,7 @@ const tailorDetailsSchema = new mongoose.Schema(
       },
     ],
     averageRating: { type: Number, default: 0 },
+     acceptedRequests: [acceptedRequestSchema],
   },
   { _id: false }
 );
@@ -52,6 +47,7 @@ const userSchema = new mongoose.Schema({
 cart: [{ type: mongoose.Schema.Types.ObjectId, ref: "Cloth" }],
 
   orders: [],
+  customDressRequests: [customRequestSchema],
   profileImage: {
     type: String,
     default: "",

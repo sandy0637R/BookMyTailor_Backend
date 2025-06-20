@@ -7,6 +7,7 @@ const userRouter = require("./routes/userRouter");
 const orderRouter = require("./routes/orderRouter");
 const tailorRouter = require("./routes/tailorRouter");
 const clothRouter = require("./routes/clothRouter");
+const customizeRouter = require("./routes/customizeRouter");
 const flash = require("connect-flash");
 const expressSession = require("express-session");
 const indexRouter = require("./routes/index");
@@ -47,6 +48,7 @@ app.use("/users", userRouter);
 app.use("/orders", orderRouter);
 app.use("/cloths", clothRouter);
 app.use("/tailors", tailorRouter);
+app.use("/custom",customizeRouter)
 
 app.listen(5000, () => {
   console.log("Server is running on port 5000");
