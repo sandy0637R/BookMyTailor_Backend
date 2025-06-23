@@ -13,6 +13,7 @@ exports.createCustomRequest = async (req, res) => {
       budget,
       duration,
       description,
+      quantity, // added
     } = req.body;
 
     const image = req.file?.filename;
@@ -30,6 +31,7 @@ exports.createCustomRequest = async (req, res) => {
       budget,
       duration,
       description,
+      quantity: quantity || 1, // default to 1 if not provided
     });
 
     await user.save();
@@ -48,8 +50,8 @@ exports.getAllCustomRequests = async (req, res) => {
 
     const allRequests = [];
 
-    users.forEach(user => {
-      user.customDressRequests.forEach(request => {
+    users.forEach((user) => {
+      user.customDressRequests.forEach((request) => {
         if (request.status === "Uploaded") {
           allRequests.push({
             ...request.toObject(),
@@ -72,7 +74,10 @@ exports.acceptCustomRequest = async (req, res) => {
     const tailorId = req.user._id;
     const { userId, requestId } = req.params;
 
-    if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(requestId)) {
+    if (
+      !mongoose.Types.ObjectId.isValid(userId) ||
+      !mongoose.Types.ObjectId.isValid(requestId)
+    ) {
       return res.status(400).json({ message: "Invalid IDs" });
     }
 
@@ -81,7 +86,9 @@ exports.acceptCustomRequest = async (req, res) => {
 
     const request = customer.customDressRequests.id(requestId);
     if (!request || request.status !== "Uploaded") {
-      return res.status(404).json({ message: "Request not found or already accepted" });
+      return res
+        .status(404)
+        .json({ message: "Request not found or already accepted" });
     }
 
     request.status = "Accepted";
@@ -182,12 +189,18 @@ exports.editCustomRequest = async (req, res) => {
 
     if (!request) return res.status(404).json({ message: "Request not found" });
     if (request.status !== "Uploaded") {
-      return res.status(400).json({ message: "Can't edit after request is accepted" });
+      return res
+        .status(400)
+        .json({ message: "Can't edit after request is accepted" });
     }
 
     // 🔥 Delete old image if new one is uploaded
     if (newImage && request.image) {
-      const oldPath = path.join(__dirname, "../uploads/customRequests", request.image);
+      const oldPath = path.join(
+        __dirname,
+        "../uploads/customRequests",
+        request.image
+      );
       fs.unlink(oldPath, (err) => {
         if (err) console.warn("Failed to delete old image:", err.message);
       });
@@ -203,7 +216,7 @@ exports.editCustomRequest = async (req, res) => {
       }
     }
 
-    // 🧠 Update allowed fields
+    // 🧠 Update allowed fields (including quantity)
     Object.keys(updates).forEach((key) => {
       if (key !== "status" && key !== "tailorId" && key in request) {
         request[key] = updates[key];
@@ -228,19 +241,29 @@ exports.deleteCustomRequest = async (req, res) => {
     const request = user.customDressRequests.id(requestId);
 
     if (!request) return res.status(404).json({ message: "Request not found" });
-    if (request.status !== "Uploaded") {
-      return res.status(400).json({ message: "Can't delete after request is accepted" });
+
+    // ✅ Allow delete if status is either Uploaded or Confirmed
+    if (!["Uploaded", "Confirmed"].includes(request.status)) {
+      return res
+        .status(400)
+        .json({
+          message: "Only 'Uploaded' or 'Confirmed' requests can be deleted",
+        });
     }
 
     // 🧹 Delete image from storage
     if (request.image) {
-      const imgPath = path.join(__dirname, "../uploads/customRequests", request.image);
+      const imgPath = path.join(
+        __dirname,
+        "../uploads/customRequests",
+        request.image
+      );
       fs.unlink(imgPath, (err) => {
         if (err) console.warn("Failed to delete image:", err.message);
       });
     }
 
-    // ✅ Use pull instead of remove
+    // ✅ Use pull to remove from array
     user.customDressRequests.pull({ _id: requestId });
     await user.save();
 
@@ -289,3 +312,41 @@ exports.getAcceptedRequests = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
+
+// ✅ Allow tailor to delete request once it's marked as "Delivered"
+exports.deleteTailorDeliveredRequest = async (req, res) => {
+  try {
+    const { userId, requestId } = req.params;
+
+    // Find tailor (logged-in user)
+    const tailor = await userModel.findById(req.user._id);
+    if (!tailor || !tailor.tailorDetails) {
+      return res.status(404).json({ message: "Tailor not found" });
+    }
+
+    // Find and remove the delivered request by requestId and customerId
+    const updatedAccepted = tailor.tailorDetails.acceptedRequests.filter(
+      (r) =>
+        !(r.requestId.toString() === requestId && r.customerId.toString() === userId)
+    );
+
+    // If nothing was removed, return 404
+    if (updatedAccepted.length === tailor.tailorDetails.acceptedRequests.length) {
+      return res.status(404).json({ message: "Request not found or already removed" });
+    }
+
+    tailor.tailorDetails.acceptedRequests = updatedAccepted;
+    await tailor.save();
+
+    res.status(200).json({ message: "Delivered request removed successfully" });
+  } catch (error) {
+    console.error("Delete Error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+
+
+
+

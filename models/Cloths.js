@@ -8,6 +8,7 @@ const clothSchema = new mongoose.Schema({
   gender: { type: String, enum: ["Male", "Female", "Unisex"], required: true },
   price: { type: Number, required: true },
   image: { type: String,required: true },
+  description: { type: String, default: "N/A" }, 
 });
 
 module.exports = mongoose.model("Cloth", clothSchema);

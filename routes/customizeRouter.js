@@ -10,6 +10,7 @@ const {
   editCustomRequest,
   deleteCustomRequest,
   getAcceptedRequests,
+  deleteTailorDeliveredRequest,
 } = require("../controllers/customizeController");
 
 const isLoggedin = require("../middleware/isLoggedin");
@@ -27,5 +28,7 @@ router.get("/requests", isLoggedin, getAllCustomRequests);
 router.put("/request/:userId/:requestId/accept", isLoggedin, acceptCustomRequest);
 router.put("/request/:userId/:requestId/status", isLoggedin, updateRequestStatus);
 router.get("/accepted-requests", isLoggedin, getAcceptedRequests);
+router.delete("/request/:userId/:requestId/tailor-delete", isLoggedin, deleteTailorDeliveredRequest);
+
 
 module.exports = router;
