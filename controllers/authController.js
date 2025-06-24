@@ -334,22 +334,49 @@ exports.removeFromWishlist = async (req, res) => {
 
 exports.addToCart = async (req, res) => {
   try {
-    const user = await userModel.findById(req.user._id);
     const { itemId } = req.body;
 
-    if (!itemId) return res.status(400).json({ message: "Item ID is required" });
-
-    // Add to cart if not already there
-    if (!user.cart.includes(itemId)) {
-      user.cart.push(itemId);
+    if (!itemId) {
+      return res.status(400).json({ message: "Item ID is required" });
     }
 
-    // ✅ Remove from wishlist if present
-    user.wishlist = user.wishlist.filter(id => id.toString() !== itemId);
+    const user = await userModel.findById(req.user._id);
 
-    await user.save();
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
 
-    res.status(200).json({ message: "Added to cart", cart: user.cart, wishlist: user.wishlist });
+    const existingItem = user.cart.find(
+      (entry) => entry.item.toString() === itemId
+    );
+
+    if (existingItem) {
+      // If item already in cart → increase quantity
+      await userModel.updateOne(
+        { _id: req.user._id, "cart.item": itemId },
+        {
+          $inc: { "cart.$.quantity": 1 },
+          $pull: { wishlist: itemId },
+        }
+      );
+    } else {
+      // If item not in cart → push new item
+      await userModel.updateOne(
+        { _id: req.user._id },
+        {
+          $push: { cart: { item: itemId, quantity: 1 } },
+          $pull: { wishlist: itemId },
+        }
+      );
+    }
+
+    const updatedUser = await userModel.findById(req.user._id);
+
+    res.status(200).json({
+      message: "Item added to cart",
+      cart: updatedUser.cart,
+      wishlist: updatedUser.wishlist,
+    });
   } catch (err) {
     console.error("Error in addToCart:", err);
     res.status(500).send("Server error");
@@ -358,18 +385,34 @@ exports.addToCart = async (req, res) => {
 
 
 
+
+
 exports.removeFromCart = async (req, res) => {
   try {
     const user = await userModel.findById(req.user._id);
     const itemId = req.params.itemId;
 
-    user.cart = user.cart.filter(id => id.toString() !== itemId);
+    const existingItem = user.cart.find(
+      (entry) => entry.item.toString() === itemId
+    );
+
+    if (!existingItem) {
+      return res.status(404).json({ message: "Item not in cart" });
+    }
+
+    if (existingItem.quantity > 1) {
+      existingItem.quantity -= 1;
+    } else {
+      user.cart = user.cart.filter((entry) => entry.item.toString() !== itemId);
+    }
+
     await user.save();
 
-    res.status(200).json({ message: "Removed from cart", cart: user.cart });
+    res.status(200).json({ message: "Updated cart", cart: user.cart });
   } catch (err) {
     console.error("Error in removeFromCart:", err);
     res.status(500).send("Server error");
   }
 };
+
 

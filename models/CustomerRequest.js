@@ -28,7 +28,7 @@ const customRequestSchema = new mongoose.Schema({
   gender: { type: String, enum: ["Male", "Female", "Other"], required: true },
   budget: { type: Number, required: true },
   quantity: { type: Number, default: 1, min: 1 },
-  duration: { type: String, required: true }, // e.g. "7 days"
+  duration: { type: Date, required: true },
   description: { type: String },
   status: {
     type: String,

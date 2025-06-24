@@ -21,7 +21,7 @@ const tailorDetailsSchema = new mongoose.Schema(
       },
     ],
     averageRating: { type: Number, default: 0 },
-     acceptedRequests: [acceptedRequestSchema],
+    acceptedRequests: [acceptedRequestSchema],
   },
   { _id: false }
 );
@@ -44,8 +44,12 @@ const userSchema = new mongoose.Schema({
     },
   },
   wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: "Cloth" }],
-cart: [{ type: mongoose.Schema.Types.ObjectId, ref: "Cloth" }],
-
+  cart: [
+    {
+      item: { type: mongoose.Schema.Types.ObjectId, ref: "Cloth" },
+      quantity: { type: Number, default: 1, min: 1 },
+    },
+  ],
   orders: [],
   customDressRequests: [customRequestSchema],
   profileImage: {
