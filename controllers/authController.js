@@ -346,8 +346,9 @@ exports.addToCart = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    const existingItem = user.cart.find(
-      (entry) => entry.item.toString() === itemId
+    // Safely find existing item in cart
+    const existingItem = user.cart.find(entry => 
+      entry.item && entry.item.toString() === itemId
     );
 
     if (existingItem) {
@@ -370,7 +371,9 @@ exports.addToCart = async (req, res) => {
       );
     }
 
-    const updatedUser = await userModel.findById(req.user._id);
+    const updatedUser = await userModel.findById(req.user._id)
+      .populate('cart.item') // Consider populating the item details
+      .populate('wishlist');
 
     res.status(200).json({
       message: "Item added to cart",
@@ -379,7 +382,7 @@ exports.addToCart = async (req, res) => {
     });
   } catch (err) {
     console.error("Error in addToCart:", err);
-    res.status(500).send("Server error");
+    res.status(500).json({ message: "Server error", error: err.message });
   }
 };
 
