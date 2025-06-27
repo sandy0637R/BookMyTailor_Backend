@@ -10,6 +10,7 @@ const clothRouter = require("./routes/clothRouter");
 const customizeRouter = require("./routes/customizeRouter");
 const flash = require("connect-flash");
 const expressSession = require("express-session");
+const chatRouter=require('./routes/chatRouter')
 const indexRouter = require("./routes/index");
 const db = require("./config/mongoose-connection");
 require("dotenv").config();
@@ -48,8 +49,31 @@ app.use("/users", userRouter);
 app.use("/orders", orderRouter);
 app.use("/cloths", clothRouter);
 app.use("/tailors", tailorRouter);
-app.use("/custom",customizeRouter)
+app.use("/custom",customizeRouter);
+app.use("/api/chat",chatRouter)
 
-app.listen(5000, () => {
+
+
+//Socket.io
+
+const http = require("http");
+const socketIo = require("socket.io");
+const server = http.createServer(app);
+
+const io = socketIo(server, {
+  cors: {
+    origin: "http://localhost:5173",
+    methods: ["GET", "POST", "DELETE", "PUT"],
+    credentials: true,
+  },
+});
+
+const socketAuth = require("./middleware/socketAuth");
+io.use(socketAuth);
+
+const initSocket = require("./config/socket");
+initSocket(io);
+
+server.listen(5000, () => {
   console.log("Server is running on port 5000");
 });
