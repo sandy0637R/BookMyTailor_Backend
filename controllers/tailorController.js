@@ -62,17 +62,14 @@ exports.addCommentOnPost = async (req, res) => {
       return res.status(400).json({ message: "Valid comment text is required" });
     }
 
-    if (!mongoose.Types.ObjectId.isValid(postId)) {
-      return res.status(400).json({ message: "Invalid post ID" });
-    }
-
-    const updatedPost = await addComment(userId, postId, text);
-    res.status(200).json({ message: "Comment added", post: updatedPost });
+    const result = await addComment(userId, postId, text);
+    res.status(200).json(result); // ✅ send the exact comment object
   } catch (err) {
     console.error("Error in addCommentOnPost:", err);
     res.status(500).json({ message: err.message });
   }
 };
+
 
 exports.getAllCommentsForPost = async (req, res) => {
   try {

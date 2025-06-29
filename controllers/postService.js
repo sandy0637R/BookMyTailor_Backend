@@ -105,17 +105,32 @@ async function toggleLike(userId, postId) {
 
 
 async function addComment(userId, postId, text) {
-  const user = await User.findOne({ "tailorDetails.posts._id": postId });
-  if (!user) throw new Error("Post not found");
+  const user = await User.findById(userId);
+  if (!user) throw new Error("User not found");
 
-  const post = user.tailorDetails.posts.id(postId);
+  const postOwner = await User.findOne({ "tailorDetails.posts._id": postId });
+  if (!postOwner) throw new Error("Post not found");
+
+  const post = postOwner.tailorDetails.posts.id(postId);
   if (!post) throw new Error("Post not found");
 
-  post.comments.push({ userId: new mongoose.Types.ObjectId(userId), commentText: text });
-  await user.save();
-  return post;
-}
+  const comment = {
+    _id: new mongoose.Types.ObjectId(),
+    userId,
+    commentText: text,
+    createdAt: new Date(),
+  };
 
+  post.comments.push(comment);
+  await postOwner.save();
+
+  return {
+    comment: {
+      ...comment,
+      userName: user.name, // Attach user's name manually
+    },
+  };
+}
 
 
 // Get all comments for a post
