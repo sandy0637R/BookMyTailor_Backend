@@ -291,12 +291,25 @@ exports.getFollowingList = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    res.status(200).json({ following: user.following || [] });
+    // 🔄 Remove duplicates by _id
+    const uniqueFollowing = [];
+    const seenIds = new Set();
+
+    for (const person of user.following || []) {
+      const idStr = person._id.toString();
+      if (!seenIds.has(idStr)) {
+        seenIds.add(idStr);
+        uniqueFollowing.push(person);
+      }
+    }
+
+    res.status(200).json({ following: uniqueFollowing });
   } catch (error) {
     console.error("Get Following List Error:", error);
     res.status(500).json({ message: "Error fetching following list" });
   }
 };
+
 
 
 exports.getUsersWhoRatedTailor = async (req, res) => {
