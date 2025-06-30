@@ -112,85 +112,88 @@ exports.getAllTailors = async (req, res) => {
   }
 };
 
+// Follow Tailor (updated)
 exports.followTailor = async (req, res) => {
   const { tailorId } = req.params;
-
-  // Extract follower info from req.user (decoded from JWT)
   const { _id: followerId, name: followerName } = req.user;
 
-  if (!mongoose.Types.ObjectId.isValid(tailorId) || !followerId || !followerName) {
-    return res.status(400).json({ message: "Invalid data" });
+  if (!mongoose.Types.ObjectId.isValid(tailorId)) {
+    return res.status(400).json({ message: "Invalid ID" });
   }
 
   try {
     const tailor = await userModel.findById(tailorId);
-    if (!tailor || !tailor.tailorDetails) {
-      return res.status(404).json({ message: "Tailor not found" });
+    const follower = await userModel.findById(followerId);
+
+    if (!tailor || !tailor.tailorDetails || !follower) {
+      return res.status(404).json({ message: "User not found" });
     }
 
-    const alreadyFollowing = tailor.tailorDetails.followers?.some(
-      (f) => f._id.toString() === followerId.toString()
-    );
-
+    // Avoid duplicates
+    const alreadyFollowing = tailor.tailorDetails.followers?.some(f => f._id.toString() === followerId.toString());
     if (alreadyFollowing) {
       return res.status(400).json({ message: "Already following" });
     }
 
-    if (!Array.isArray(tailor.tailorDetails.followers)) {
-      tailor.tailorDetails.followers = [];
-    }
+    // Add to followers
+    tailor.tailorDetails.followers.push({ _id: followerId, name: followerName });
 
-    // **Fixed here: use 'new' with ObjectId**
-    tailor.tailorDetails.followers.push({ _id: new mongoose.Types.ObjectId(followerId), name: followerName });
+    // Add to follower's following list
+    follower.following.push({ _id: tailor._id, name: tailor.name });
 
     await tailor.save();
+    await follower.save();
 
-    res.status(200).json({
-      message: "Followed successfully",
-      followersCount: tailor.tailorDetails.followers.length,
-    });
+    res.status(200).json({ message: "Followed successfully", followersCount: tailor.tailorDetails.followers.length });
   } catch (err) {
-    console.error("Follow Tailor Error:", err);
-    res.status(500).json({ message: "Server error", error: err.message });
+    console.error("Follow Error:", err);
+    res.status(500).json({ message: "Server error" });
   }
 };
+
 
 
 
 
 // Unfollow Tailor
+// Unfollow Tailor (updated)
 exports.unfollowTailor = async (req, res) => {
   const { tailorId } = req.params;
-
-  // Changed: get followerId from req.user, not req.body
   const { _id: followerId } = req.user;
 
-  if (!mongoose.Types.ObjectId.isValid(tailorId) || !mongoose.Types.ObjectId.isValid(followerId)) {
+  if (
+    !mongoose.Types.ObjectId.isValid(tailorId) ||
+    !mongoose.Types.ObjectId.isValid(followerId)
+  ) {
     return res.status(400).json({ message: "Invalid data" });
   }
 
   try {
-    const tailor = await userModel.findById(tailorId);
-    if (!tailor || !tailor.tailorDetails) {
-      return res.status(404).json({ message: "Tailor not found" });
-    }
+    // Remove follower from tailor's followers list (array of objects)
+    await userModel.findByIdAndUpdate(tailorId, {
+      $pull: { "tailorDetails.followers": { _id: followerId } }
+    });
 
-    // Remove follower by comparing strings
-    tailor.tailorDetails.followers = (tailor.tailorDetails.followers || []).filter(
-      (f) => f._id.toString() !== followerId.toString()  // changed for safe string compare
-    );
+    // Remove tailor from user's following list (array of ObjectIds)
+    await userModel.findByIdAndUpdate(followerId, {
+  $pull: { following: { _id: tailorId } }
+});
 
-    await tailor.save();
+
+    // Re-fetch updated followers count
+    const updatedTailor = await userModel.findById(tailorId).select("tailorDetails.followers");
 
     res.status(200).json({
       message: "Unfollowed successfully",
-      followersCount: tailor.tailorDetails.followers.length,
+      followersCount: updatedTailor?.tailorDetails?.followers?.length || 0
     });
   } catch (err) {
-    console.error("Unfollow Tailor Error:", err);
-    res.status(500).json({ message: "Server error", error: err.message });
+    console.error("Unfollow Error:", err);
+    res.status(500).json({ message: "Server error" });
   }
 };
+
+
 
 
 // Get Followers of Tailor
@@ -257,9 +260,13 @@ exports.getRatingsForTailor = async (req, res) => {
     const ratings = await Rating.find({ tailorId });
 
     const avgRating =
-      ratings.reduce((sum, r) => sum + r.rating, 0) / (ratings.length || 1);
+      ratings.length > 0
+        ? ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length
+        : 0;
 
-    const userRating = ratings.find(r => r.userId.toString() === userId.toString());
+    const userRating = ratings.find(
+      (r) => r.userId.toString() === userId.toString()
+    );
 
     res.json({
       averageRating: avgRating,
@@ -269,3 +276,49 @@ exports.getRatingsForTailor = async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 };
+
+exports.getFollowingList = async (req, res) => {
+  const { userId } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    return res.status(400).json({ message: "Invalid user ID" });
+  }
+
+  try {
+    const user = await userModel.findById(userId).select("following");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({ following: user.following || [] });
+  } catch (error) {
+    console.error("Get Following List Error:", error);
+    res.status(500).json({ message: "Error fetching following list" });
+  }
+};
+
+
+exports.getUsersWhoRatedTailor = async (req, res) => {
+  const { tailorId } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(tailorId)) {
+    return res.status(400).json({ message: "Invalid tailor ID" });
+  }
+
+  try {
+    const ratings = await Rating.find({ tailorId }).populate("userId", "name");
+
+    const ratedUsers = ratings.map((r) => ({
+      _id: r.userId._id,
+      name: r.userId.name,
+      rating: r.rating,
+    }));
+
+    res.status(200).json({ ratedUsers });
+  } catch (error) {
+    console.error("Get Rated Users Error:", error);
+    res.status(500).json({ message: "Error fetching rated users", error: error.message });
+  }
+};
+

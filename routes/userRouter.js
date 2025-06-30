@@ -19,6 +19,8 @@ const {
   removeFromCart,
 } = require("../controllers/authController");
 
+const{getFollowingList,getUsersWhoRatedTailor}=require("../controllers/tailorController")
+
 const isLoggedin = require("../middleware/isLoggedin");
 
 // Test Route
@@ -52,6 +54,8 @@ router.delete("/wishlist/:itemId", isLoggedin, removeFromWishlist);
 // ✅ Cart routes — match frontend (POST with body, DELETE with param)
 router.post("/cart", isLoggedin, addToCart); // expects { itemId } in body
 router.delete("/cart/:itemId", isLoggedin, removeFromCart);        // Fro
+router.get("/tailors/:tailorId/rated-users", isLoggedin,getUsersWhoRatedTailor);
+router.get("/:userId/following", isLoggedin,getFollowingList);
 
 
 module.exports = router;

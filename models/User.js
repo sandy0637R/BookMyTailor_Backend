@@ -20,6 +20,7 @@ const tailorDetailsSchema = new mongoose.Schema(
         name: String,
       },
     ],
+    
     averageRating: { type: Number, default: 0 },
     acceptedRequests: [acceptedRequestSchema],
   },
@@ -56,6 +57,16 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: "",
   },
+  following: [
+  {
+    _id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+    name: String,
+  },
+],
+
   address: String,
   tailorDetails: {
     type: tailorDetailsSchema,
