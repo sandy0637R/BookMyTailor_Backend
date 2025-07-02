@@ -5,6 +5,32 @@ const {  toggleLike, addComment,
 const mongoose = require("mongoose");
 
 
+// Example controller logic
+exports.getTailorById = async (req, res) => {
+  try {
+    const tailor = await userModel.findById(req.params.id);
+
+    if (!tailor || !tailor.roles.includes("tailor")) {
+      return res.status(404).json({ message: "Tailor not found" });
+    }
+if (tailor.tailorDetails?.posts) {
+  tailor.tailorDetails.posts = tailor.tailorDetails.posts.map(post => ({
+    ...post.toObject(),
+    postedBy: {
+      _id: tailor._id,
+      name: tailor.name,
+    },
+  }));
+}
+    res.json(tailor); // ✅ tailor.tailorDetails is included
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+
+
+
 exports.getAllPosts = async (req, res) => {
   try {
     const users = await userModel.find().select("name email tailorDetails.posts");

@@ -8,7 +8,6 @@ const ProductTagSchema = new mongoose.Schema({
   },
 });
 
-// Comment schema for nested comments inside posts
 const CommentSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   commentText: { type: String, required: true },
@@ -16,18 +15,19 @@ const CommentSchema = new mongoose.Schema({
 });
 
 const PostSchema = new mongoose.Schema({
-  images: [{ type: String }], // URLs or filenames
+  images: [{ type: String }],
   caption: { type: String },
   hashtags: [{ type: String }],
-  location: { type: String },
-  taggedPeople: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // user IDs
-  altText: { type: String },
-  productTags: [ProductTagSchema],
-  scheduledTime: { type: Date },
+  createdAt: { type: Date, default: Date.now },
 
-  // New fields
-  likes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // array of user IDs who liked
-  comments: [CommentSchema], // array of comments
+  // ✅ NEW: Posted by tailor
+  postedBy: {
+    _id: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    name: { type: String },
+  },
+
+  likes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+  comments: [CommentSchema],
 });
 
 module.exports = PostSchema;

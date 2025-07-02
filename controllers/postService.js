@@ -11,17 +11,25 @@ async function addPost(userId, postData, images = []) {
     throw new Error("User is not a tailor or tailorDetails missing");
   }
 
+  // Prepare image URLs
   postData.images = Array.isArray(images)
     ? images
         .filter((file) => file && file.path)
-        .map((file) => SERVER_URL + "/" + file.path.replace(/\\/g, "/")) // prepend server URL for global path
+        .map((file) => SERVER_URL + "/" + file.path.replace(/\\/g, "/"))
     : [];
+
+  // ✅ Add postedBy field
+  postData.postedBy = {
+    _id: user._id,
+    name: user.name,
+  };
 
   user.tailorDetails.posts.push(postData);
   await user.save();
 
   return user.tailorDetails.posts[user.tailorDetails.posts.length - 1];
 }
+
 
 async function updatePost(userId, postId, updatedData, images = []) {
   const user = await User.findById(userId);

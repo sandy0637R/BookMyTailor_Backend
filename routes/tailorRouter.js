@@ -13,6 +13,7 @@ const {
   unfollowTailor,
   rateTailor,
   getRatingsForTailor,
+  getTailorById,
 } = require("../controllers/tailorController");
 
 router.get("/posts", isLoggedin, getAllPosts);
@@ -29,5 +30,7 @@ router.get("/followers/:tailorId", isLoggedin, getFollowersOfTailor);
 
 router.post("/rate", isLoggedin, rateTailor);
 router.get("/ratings/:tailorId", isLoggedin, getRatingsForTailor);
+router.get("/:id",  getTailorById);
+
 
 module.exports = router;
