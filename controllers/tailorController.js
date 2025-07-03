@@ -8,22 +8,48 @@ const mongoose = require("mongoose");
 // Example controller logic
 exports.getTailorById = async (req, res) => {
   try {
-    const tailor = await userModel.findById(req.params.id);
+    const tailorDoc = await userModel.findById(req.params.id)
+      .select("name email profileImage address tailorDetails roles"); // ✅ Added roles
 
-    if (!tailor || !tailor.roles.includes("tailor")) {
+    if (!tailorDoc || !tailorDoc.roles.includes("tailor")) {
       return res.status(404).json({ message: "Tailor not found" });
     }
-if (tailor.tailorDetails?.posts) {
-  tailor.tailorDetails.posts = tailor.tailorDetails.posts.map(post => ({
-    ...post.toObject(),
-    postedBy: {
-      _id: tailor._id,
-      name: tailor.name,
-    },
-  }));
-}
-    res.json(tailor); // ✅ tailor.tailorDetails is included
+
+    const tailor = tailorDoc.toObject(); // Convert to plain object
+
+    // Collect all unique userIds from comments
+    const allUserIds = [];
+    tailor.tailorDetails?.posts?.forEach(post => {
+      post.comments?.forEach(comment => {
+        if (comment.userId) allUserIds.push(comment.userId);
+      });
+    });
+
+    const uniqueUserIds = [...new Set(allUserIds.map(id => String(id)))];
+
+    // Fetch user names
+    const users = await userModel.find({ _id: { $in: uniqueUserIds } }).select("name");
+    const userMap = {};
+    users.forEach(u => {
+      userMap[u._id.toString()] = u.name;
+    });
+
+    // Enhance posts with postedBy and comment userName
+    tailor.tailorDetails.posts = tailor.tailorDetails.posts.map(post => ({
+      ...post,
+      postedBy: {
+        _id: tailor._id,
+        name: tailor.name,
+      },
+      comments: post.comments.map(comment => ({
+        ...comment,
+        userName: userMap[comment.userId?.toString()] || "User", // ✅ Safe access
+      })),
+    }));
+
+    res.json({ tailor });
   } catch (error) {
+    console.error("❌ Error fetching tailor:", error);
     res.status(500).json({ message: "Server error" });
   }
 };
