@@ -136,6 +136,16 @@ module.exports.getProfile = async function (req, res) {
   }
 };
 
+exports.getUserById = async (req, res) => {
+  try {
+    const user = await userModel.findById(req.params.id).select("name email roles profileImage address following");
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.status(200).json(user);
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 // Update Profile with optional image upload
 module.exports.updateProfile = async function (req, res) {
   try {

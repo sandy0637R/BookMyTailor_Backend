@@ -17,6 +17,7 @@ const {
   removeFromWishlist,
   addToCart,
   removeFromCart,
+  getUserById,
 } = require("../controllers/authController");
 
 const{getFollowingList,getUsersWhoRatedTailor}=require("../controllers/tailorController")
@@ -56,6 +57,9 @@ router.post("/cart", isLoggedin, addToCart); // expects { itemId } in body
 router.delete("/cart/:itemId", isLoggedin, removeFromCart);        // Fro
 router.get("/tailors/:tailorId/rated-users", isLoggedin,getUsersWhoRatedTailor);
 router.get("/:userId/following", isLoggedin,getFollowingList);
+
+router.get("/:id", isLoggedin, getUserById);
+
 
 
 module.exports = router;
