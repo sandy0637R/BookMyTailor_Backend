@@ -11,18 +11,21 @@ async function addPost(userId, postData, images = []) {
     throw new Error("User is not a tailor or tailorDetails missing");
   }
 
-  // Prepare image URLs
   postData.images = Array.isArray(images)
     ? images
         .filter((file) => file && file.path)
         .map((file) => SERVER_URL + "/" + file.path.replace(/\\/g, "/"))
     : [];
 
-  // ✅ Add postedBy field
   postData.postedBy = {
     _id: user._id,
     name: user.name,
   };
+
+  // ✅ Add productLink support (optional)
+  if (typeof postData.productLink !== "undefined") {
+    postData.productLink = postData.productLink;
+  }
 
   user.tailorDetails.posts.push(postData);
   await user.save();
@@ -41,8 +44,13 @@ async function updatePost(userId, postId, updatedData, images = []) {
   if (Array.isArray(images) && images.length > 0) {
     const newImages = images
       .filter((file) => file && file.path)
-      .map((file) => SERVER_URL + "/" + file.path.replace(/\\/g, "/")); // prepend server URL for global path
-    post.images.push(...newImages);
+      .map((file) => SERVER_URL + "/" + file.path.replace(/\\/g, "/"));
+    post.images = newImages;
+  }
+
+  // ✅ Apply only productLink update if provided
+  if (typeof updatedData.productLink !== "undefined") {
+    post.productLink = updatedData.productLink;
   }
 
   Object.assign(post, updatedData);
@@ -50,6 +58,8 @@ async function updatePost(userId, postId, updatedData, images = []) {
 
   return post;
 }
+
+
 
 async function deletePost(userId, postId) {
   if (!mongoose.Types.ObjectId.isValid(postId)) {

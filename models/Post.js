@@ -25,6 +25,7 @@ const PostSchema = new mongoose.Schema({
     _id: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     name: { type: String },
   },
+  productLink: { type: String, default: "" },
 
   likes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
   comments: [CommentSchema],

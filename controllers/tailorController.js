@@ -6,54 +6,57 @@ const mongoose = require("mongoose");
 
 
 // Example controller logic
+
 exports.getTailorById = async (req, res) => {
   try {
-    const tailorDoc = await userModel.findById(req.params.id)
-      .select("name email profileImage address tailorDetails roles"); // ✅ includes roles
+    const tailorDoc = await userModel
+      .findById(req.params.id)
+      .select("name email profileImage address tailorDetails roles");
 
     if (!tailorDoc || !tailorDoc.roles.includes("tailor")) {
       return res.status(404).json({ message: "Tailor not found" });
     }
 
-    const tailor = tailorDoc.toObject(); // Convert to plain object
+    const tailor = tailorDoc.toObject();
 
-    // ✅ Calculate experience from createdAt
     if (tailor.tailorDetails?.createdAt) {
       const now = new Date();
       const createdAt = new Date(tailor.tailorDetails.createdAt);
       const diff = now - createdAt;
 
       const years = Math.floor(diff / (1000 * 60 * 60 * 24 * 365));
-      const days = Math.floor((diff % (1000 * 60 * 60 * 24 * 365)) / (1000 * 60 * 60 * 24));
+      const days = Math.floor(
+        (diff % (1000 * 60 * 60 * 24 * 365)) / (1000 * 60 * 60 * 24)
+      );
 
       tailor.tailorDetails.experience = `${years}yr${years === 1 ? "" : "s"} ${days} day${days !== 1 ? "s" : ""}`;
     }
 
-    // Collect all unique userIds from comments
     const allUserIds = [];
-    tailor.tailorDetails?.posts?.forEach(post => {
-      post.comments?.forEach(comment => {
+    tailor.tailorDetails?.posts?.forEach((post) => {
+      post.comments?.forEach((comment) => {
         if (comment.userId) allUserIds.push(comment.userId);
       });
     });
 
-    const uniqueUserIds = [...new Set(allUserIds.map(id => String(id)))];
+    const uniqueUserIds = [...new Set(allUserIds.map((id) => String(id)))];
 
-    // Fetch user names
-    const users = await userModel.find({ _id: { $in: uniqueUserIds } }).select("name");
+    const users = await userModel
+      .find({ _id: { $in: uniqueUserIds } })
+      .select("name");
     const userMap = {};
-    users.forEach(u => {
+    users.forEach((u) => {
       userMap[u._id.toString()] = u.name;
     });
 
-    // Enhance posts with postedBy and comment userName
-    tailor.tailorDetails.posts = tailor.tailorDetails.posts.map(post => ({
+    tailor.tailorDetails.posts = tailor.tailorDetails.posts.map((post) => ({
       ...post,
+      productLink: post.productLink || "", // ✅ include productLink
       postedBy: {
         _id: tailor._id,
         name: tailor.name,
       },
-      comments: post.comments.map(comment => ({
+      comments: post.comments.map((comment) => ({
         ...comment,
         userName: userMap[comment.userId?.toString()] || "User",
       })),
