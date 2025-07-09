@@ -5,7 +5,6 @@ const acceptedRequestSchema = require("./TailorsAcceptedReq");
 
 const tailorDetailsSchema = new mongoose.Schema(
   {
-    experience: Number,
     specialization: [String],
     fees: Number,
     topDesigns: [String],
@@ -23,6 +22,7 @@ const tailorDetailsSchema = new mongoose.Schema(
     
     averageRating: { type: Number, default: 0 },
     acceptedRequests: [acceptedRequestSchema],
+    createdAt: { type: Date, default: Date.now }, 
   },
   { _id: false }
 );

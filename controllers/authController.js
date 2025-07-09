@@ -147,6 +147,7 @@ exports.getUserById = async (req, res) => {
 };
 
 // Update Profile with optional image upload
+// Update Profile (only touch roles and tailorDetails logic)
 module.exports.updateProfile = async function (req, res) {
   try {
     const userId = req.user._id;
@@ -156,39 +157,43 @@ module.exports.updateProfile = async function (req, res) {
 
     if (!user.roles) user.roles = ["customer"];
 
+    // ✅ Fix: Ensure tailorDetails added only when all fields are valid
     const incomingRoles = (updates.roles || updates.role || []).map(r => r.toLowerCase());
     const isAddingTailor = incomingRoles.includes("tailor") && !user.roles.includes("tailor");
 
     if (isAddingTailor) {
-  const { experience, specialization, fees } = updates.tailorDetails || {};
-  if (!experience || !specialization || !fees) {
-    return res.status(400).json({
-      message: "Tailor details must include experience, specialization, and fees.",
-    });
-  }
-  user.tailorDetails = updates.tailorDetails;
-  user.roles.push("tailor");
-} else if (user.roles.includes("tailor") && updates.tailorDetails) {
-  // ✅ update tailorDetails if already a tailor
-  user.tailorDetails = {
-    ...user.tailorDetails,
-    ...updates.tailorDetails,
-  };
-}
-
-
-    if (req.file) {
-      if (user.profileImage) {
-        const oldImagePath = path.join(__dirname, "..", user.profileImage);
-        if (fs.existsSync(oldImagePath)) fs.unlinkSync(oldImagePath);
+      const { specialization, fees, description } = updates.tailorDetails || {};
+      if (
+        specialization !== undefined &&
+        fees !== undefined
+      ) {
+        user.tailorDetails = {
+          specialization,
+          fees,
+          description,
+          createdAt: new Date(), // ✅ Added timestamp on tailor creation
+        };
+        user.roles.push("tailor");
+      } else {
+        return res.status(400).json({
+          message: "Tailor details must include specialization and fees.",
+        });
       }
-      user.profileImage = req.file.path.replace(/\\/g, "/");
     }
 
-    if (updates.name) user.name = updates.name;
-    if (updates.email) user.email = updates.email;
-    if (updates.address) user.address=updates.address;
+    if (user.roles.includes("tailor") && updates.tailorDetails) {
+      user.tailorDetails = {
+        ...user.tailorDetails,
+        ...updates.tailorDetails,
+      };
+    }
 
+    // ✅ Save uploaded profile image if exists
+    if (req.file) {
+      user.profileImage = req.file.path;
+    }
+
+    // ✅ Don't touch other fields (profileImage, name, email, address etc.)
     await user.save();
 
     res.status(200).json({
@@ -200,6 +205,9 @@ module.exports.updateProfile = async function (req, res) {
     res.status(500).send("Server error.");
   }
 };
+
+
+
 
 // Delete Profile Image
 module.exports.deleteProfileImage = async function (req, res) {

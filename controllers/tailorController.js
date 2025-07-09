@@ -9,13 +9,25 @@ const mongoose = require("mongoose");
 exports.getTailorById = async (req, res) => {
   try {
     const tailorDoc = await userModel.findById(req.params.id)
-      .select("name email profileImage address tailorDetails roles"); // ✅ Added roles
+      .select("name email profileImage address tailorDetails roles"); // ✅ includes roles
 
     if (!tailorDoc || !tailorDoc.roles.includes("tailor")) {
       return res.status(404).json({ message: "Tailor not found" });
     }
 
     const tailor = tailorDoc.toObject(); // Convert to plain object
+
+    // ✅ Calculate experience from createdAt
+    if (tailor.tailorDetails?.createdAt) {
+      const now = new Date();
+      const createdAt = new Date(tailor.tailorDetails.createdAt);
+      const diff = now - createdAt;
+
+      const years = Math.floor(diff / (1000 * 60 * 60 * 24 * 365));
+      const days = Math.floor((diff % (1000 * 60 * 60 * 24 * 365)) / (1000 * 60 * 60 * 24));
+
+      tailor.tailorDetails.experience = `${years}yr${years === 1 ? "" : "s"} ${days} day${days !== 1 ? "s" : ""}`;
+    }
 
     // Collect all unique userIds from comments
     const allUserIds = [];
@@ -43,7 +55,7 @@ exports.getTailorById = async (req, res) => {
       },
       comments: post.comments.map(comment => ({
         ...comment,
-        userName: userMap[comment.userId?.toString()] || "User", // ✅ Safe access
+        userName: userMap[comment.userId?.toString()] || "User",
       })),
     }));
 
@@ -374,11 +386,13 @@ exports.getUsersWhoRatedTailor = async (req, res) => {
   try {
     const ratings = await Rating.find({ tailorId }).populate("userId", "name");
 
-    const ratedUsers = ratings.map((r) => ({
-      _id: r.userId._id,
-      name: r.userId.name,
-      rating: r.rating,
-    }));
+    const ratedUsers = ratings
+      .filter(r => r.userId) // ✅ Avoid null users
+      .map(r => ({
+        _id: r.userId._id,
+        name: r.userId.name,
+        rating: r.rating,
+      }));
 
     res.status(200).json({ ratedUsers });
   } catch (error) {
@@ -386,4 +400,3 @@ exports.getUsersWhoRatedTailor = async (req, res) => {
     res.status(500).json({ message: "Error fetching rated users", error: error.message });
   }
 };
-
