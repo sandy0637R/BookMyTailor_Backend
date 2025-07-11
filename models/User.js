@@ -22,6 +22,7 @@ const tailorDetailsSchema = new mongoose.Schema(
     
     averageRating: { type: Number, default: 0 },
     acceptedRequests: [acceptedRequestSchema],
+    
     createdAt: { type: Date, default: Date.now }, 
   },
   { _id: false }
@@ -53,6 +54,8 @@ const userSchema = new mongoose.Schema({
   ],
   orders: [],
   customDressRequests: [customRequestSchema],
+  customHistory: [customRequestSchema], // <-- Add this
+
   profileImage: {
     type: String,
     default: "",

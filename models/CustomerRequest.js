@@ -40,7 +40,7 @@ const customRequestSchema = new mongoose.Schema({
     ref: "User",
     default: null,
   },
-  createdAt: { type: Date, default: Date.now },
+   submittedAt: { type: Date, default: Date.now },
 });
 
 module.exports = customRequestSchema;

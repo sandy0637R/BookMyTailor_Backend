@@ -21,6 +21,16 @@ exports.createCustomRequest = async (req, res) => {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
+    // ✅ Check if duration is at least 72 hours ahead
+    const now = new Date();
+    const selectedDate = new Date(duration);
+    const diffHours = (selectedDate - now) / (1000 * 60 * 60);
+    if (diffHours < 72) {
+      return res.status(400).json({
+        message: "Duration must be at least 3 days (72 hours) from now.",
+      });
+    }
+
     const user = await userModel.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
@@ -31,7 +41,7 @@ exports.createCustomRequest = async (req, res) => {
       budget,
       duration,
       description,
-      quantity: quantity || 1, // default to 1 if not provided
+      quantity: quantity || 1,
     });
 
     await user.save();
@@ -42,6 +52,7 @@ exports.createCustomRequest = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
 
 // 🧵 2. Tailor: View all uploaded custom requests
 exports.getAllCustomRequests = async (req, res) => {
@@ -160,6 +171,16 @@ exports.confirmDelivery = async (req, res) => {
 
     request.status = "Confirmed";
 
+    // ✅ Also push to customHistory
+    const alreadyInHistory = user.customHistory.some(
+      (r) => r._id.toString() === request._id.toString()
+    );
+
+    if (!alreadyInHistory) {
+      user.customHistory.push(request.toObject());
+    }
+
+    // ✅ Update tailor side too
     const tailor = await userModel.findById(request.tailorId);
     const accepted = tailor?.tailorDetails?.acceptedRequests.find(
       (r) => r.requestId.toString() === requestId
@@ -175,6 +196,7 @@ exports.confirmDelivery = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
 
 // 🧵 6. Customer: Edit a custom request before it's accepted
 exports.editCustomRequest = async (req, res) => {
@@ -216,7 +238,19 @@ exports.editCustomRequest = async (req, res) => {
       }
     }
 
-    // 🧠 Update allowed fields (including quantity)
+    // ✅ Optional: check if updated duration is valid
+    if (updates.duration) {
+      const now = new Date();
+      const selected = new Date(updates.duration);
+      const diffHrs = (selected - now) / (1000 * 60 * 60);
+      if (diffHrs < 72) {
+        return res.status(400).json({
+          message: "Updated duration must be at least 3 days (72 hours) from now.",
+        });
+      }
+    }
+
+    // 🧠 Update allowed fields
     Object.keys(updates).forEach((key) => {
       if (key !== "status" && key !== "tailorId" && key in request) {
         request[key] = updates[key];
@@ -230,6 +264,7 @@ exports.editCustomRequest = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
 
 // 🧵 7. Customer: Delete a custom request before it's accepted
 exports.deleteCustomRequest = async (req, res) => {
@@ -274,6 +309,7 @@ exports.deleteCustomRequest = async (req, res) => {
   }
 };
 
+
 // 🧵 8. Tailor: Get only their accepted custom requests
 exports.getAcceptedRequests = async (req, res) => {
   try {
@@ -291,7 +327,7 @@ exports.getAcceptedRequests = async (req, res) => {
         const customer = await userModel.findById(entry.customerId);
         const request = customer?.customDressRequests?.id(entry.requestId);
 
-        if (!request) return null;
+        if (!request || request.status === "Confirmed") return null; // ⛔️ Skip confirmed ones
 
         return {
           ...request.toObject(),
@@ -303,7 +339,6 @@ exports.getAcceptedRequests = async (req, res) => {
       })
     );
 
-    // filter out nulls
     const filtered = enrichedRequests.filter(Boolean);
 
     res.status(200).json(filtered);
@@ -312,6 +347,7 @@ exports.getAcceptedRequests = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
 
 
 // ✅ Allow tailor to delete request once it's marked as "Delivered"
@@ -348,5 +384,45 @@ exports.deleteTailorDeliveredRequest = async (req, res) => {
 
 
 
+// 🧵 9. Customer: Get archived (history) requests
+exports.getRequestHistory = async (req, res) => {
+  try {
+    const currentUser = await userModel.findById(req.user._id);
+    if (!currentUser) return res.status(404).json({ message: "User not found" });
 
+    // 🧵 Tailor: Fetch histories from customers they worked with
+    if (currentUser.roles.includes("tailor")) {
+      const tailorAccepted = currentUser.tailorDetails?.acceptedRequests || [];
+
+      const historyList = await Promise.all(
+        tailorAccepted.map(async (entry) => {
+          const customer = await userModel.findById(entry.customerId);
+          if (!customer || !Array.isArray(customer.customHistory)) return null;
+
+          const history = customer.customHistory.find(
+            (h) => h._id?.toString() === entry.requestId?.toString()
+          );
+          if (!history) return null;
+
+          return {
+            ...history.toObject?.() || history,
+            customer: {
+              name: customer.name,
+              userId: customer._id,
+            },
+          };
+        })
+      );
+
+      const filtered = historyList.filter(Boolean);
+      return res.status(200).json(filtered);
+    }
+
+    // 🧍 Customer: Return own history
+    return res.status(200).json(currentUser.customHistory || []);
+  } catch (err) {
+    console.error("getRequestHistory error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
 

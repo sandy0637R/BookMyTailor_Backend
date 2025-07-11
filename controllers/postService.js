@@ -1,5 +1,8 @@
 const User = require("../models/User");
 const mongoose = require("mongoose");
+const fs = require("fs");
+const path = require("path");
+
 
 const SERVER_URL = process.env.SERVER_URL || "http://localhost:5000"; // Use env variable for global server URL
 
@@ -42,13 +45,24 @@ async function updatePost(userId, postId, updatedData, images = []) {
   if (!post) throw new Error("Post not found");
 
   if (Array.isArray(images) && images.length > 0) {
+    // ✅ Delete old images
+    post.images?.forEach((imageUrl) => {
+      const filePath = path.join(
+        __dirname,
+        "..",
+        imageUrl.replace(SERVER_URL + "/", "")
+      );
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    });
+
     const newImages = images
       .filter((file) => file && file.path)
       .map((file) => SERVER_URL + "/" + file.path.replace(/\\/g, "/"));
     post.images = newImages;
   }
 
-  // ✅ Apply only productLink update if provided
   if (typeof updatedData.productLink !== "undefined") {
     post.productLink = updatedData.productLink;
   }
@@ -61,6 +75,7 @@ async function updatePost(userId, postId, updatedData, images = []) {
 
 
 
+
 async function deletePost(userId, postId) {
   if (!mongoose.Types.ObjectId.isValid(postId)) {
     throw new Error("Invalid Post ID");
@@ -68,20 +83,30 @@ async function deletePost(userId, postId) {
 
   const user = await User.findById(userId);
   if (!user) throw new Error("User not found");
-
   if (!user.tailorDetails) {
     throw new Error("User is not a tailor or tailorDetails missing");
   }
 
   const post = user.tailorDetails.posts.id(postId);
-  if (!post) {
-    throw new Error("Post not found");
-  }
+  if (!post) throw new Error("Post not found");
+
+  // ✅ Delete images from filesystem
+  post.images?.forEach((imageUrl) => {
+    const filePath = path.join(
+      __dirname,
+      "..",
+      imageUrl.replace(SERVER_URL + "/", "")
+    );
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+  });
 
   post.deleteOne();
   await user.save();
   return true;
 }
+
 
 async function getAllPosts(userId) {
   const user = await User.findById(userId);
