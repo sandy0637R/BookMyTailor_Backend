@@ -80,6 +80,7 @@ exports.getAllCustomRequests = async (req, res) => {
 };
 
 // 🧵 3. Tailor: Accept a request
+// 🧵 3. Tailor: Accept a request
 exports.acceptCustomRequest = async (req, res) => {
   try {
     const tailorId = req.user._id;
@@ -105,6 +106,9 @@ exports.acceptCustomRequest = async (req, res) => {
     request.status = "Accepted";
     request.tailorId = tailorId;
 
+    // ✅ Add acceptedAt timestamp here
+    request.acceptedAt = new Date();
+
     tailor.tailorDetails.acceptedRequests.push({
       requestId,
       customerId: userId,
@@ -119,6 +123,7 @@ exports.acceptCustomRequest = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
 
 // 🧵 4. Tailor: Update tracking status
 exports.updateRequestStatus = async (req, res) => {
@@ -425,4 +430,32 @@ exports.getRequestHistory = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+ 
+// 🧵 2b. Tailor: View direct custom requests sent to them
+exports.getDirectRequestsForTailor = async (req, res) => {
+  try {
+    const tailorId = req.user._id;
 
+    const users = await userModel.find().select("name customDressRequests");
+    const directRequests = [];
+
+    users.forEach((user) => {
+      user.customDressRequests.forEach((request) => {
+        if (
+          request.status === "Uploaded" &&
+          request.tailorId?.toString() === tailorId.toString()
+        ) {
+          directRequests.push({
+            ...request.toObject(),
+            customer: { name: user.name, userId: user._id },
+          });
+        }
+      });
+    });
+
+    res.status(200).json(directRequests);
+  } catch (err) {
+    console.error("getDirectRequestsForTailor error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
