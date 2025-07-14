@@ -23,7 +23,7 @@ const measurementSchema = new mongoose.Schema({
 }, { _id: false });
 
 const customRequestSchema = new mongoose.Schema({
-  image: { type: String, required: true }, // image filename or URL
+  image:  String, // image filename or URL
   measurements: { type: measurementSchema, required: true },
   gender: { type: String, enum: ["Male", "Female", "Other"], required: true },
   budget: { type: Number, required: true },

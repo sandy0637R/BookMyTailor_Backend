@@ -14,10 +14,11 @@ exports.createCustomRequest = async (req, res) => {
       duration,
       description,
       quantity, // added
+      tailorId,
     } = req.body;
 
     const image = req.file?.filename;
-    if (!image || !measurements || !gender || !budget || !duration) {
+    if ( !measurements || !gender || !budget || !duration) {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
@@ -42,6 +43,7 @@ exports.createCustomRequest = async (req, res) => {
       duration,
       description,
       quantity: quantity || 1,
+      tailorId: tailorId || null,
     });
 
     await user.save();
@@ -63,7 +65,7 @@ exports.getAllCustomRequests = async (req, res) => {
 
     users.forEach((user) => {
       user.customDressRequests.forEach((request) => {
-        if (request.status === "Uploaded") {
+        if (request.status === "Uploaded" && !request.tailorId) {
           allRequests.push({
             ...request.toObject(),
             customer: { name: user.name, userId: user._id },
@@ -78,6 +80,7 @@ exports.getAllCustomRequests = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
 
 // 🧵 3. Tailor: Accept a request
 // 🧵 3. Tailor: Accept a request
@@ -261,6 +264,9 @@ exports.editCustomRequest = async (req, res) => {
         request[key] = updates[key];
       }
     });
+     if ("tailorId" in updates) {
+      request.tailorId = updates.tailorId || null;
+    }
 
     await user.save();
     res.status(200).json({ message: "Request updated successfully" });
