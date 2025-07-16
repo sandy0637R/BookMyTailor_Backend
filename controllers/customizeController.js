@@ -154,6 +154,11 @@ exports.updateRequestStatus = async (req, res) => {
     request.status = status;
     accepted.status = status;
 
+    // ✅ Store delivered date if not already set
+    if (status === "Delivered" && !request.deliveredAt) {
+      request.deliveredAt = new Date();
+    }
+
     await customer.save();
     await tailor.save();
 
@@ -163,6 +168,7 @@ exports.updateRequestStatus = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
 
 // 🧵 5. Customer: Confirm delivery
 exports.confirmDelivery = async (req, res) => {

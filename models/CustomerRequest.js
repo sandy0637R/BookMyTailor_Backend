@@ -40,6 +40,11 @@ const customRequestSchema = new mongoose.Schema({
     ref: "User",
     default: null,
   },
+  deliveredAt: {
+  type: Date,
+  default: null,
+},
+
   acceptedAt: { // ✅ New field for timing
     type: Date,
     default: null,
