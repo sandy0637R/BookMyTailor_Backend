@@ -20,6 +20,8 @@ const {
   getUserById,
 } = require("../controllers/authController");
 
+
+
 const{getFollowingList,getUsersWhoRatedTailor}=require("../controllers/tailorController")
 
 const isLoggedin = require("../middleware/isLoggedin");
@@ -59,6 +61,7 @@ router.get("/tailors/:tailorId/rated-users", isLoggedin,getUsersWhoRatedTailor);
 router.get("/:userId/following", isLoggedin,getFollowingList);
 
 router.get("/:id", isLoggedin, getUserById);
+
 
 
 

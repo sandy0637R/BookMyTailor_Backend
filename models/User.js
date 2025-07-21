@@ -55,6 +55,7 @@ const userSchema = new mongoose.Schema({
   orders: [],
   customDressRequests: [customRequestSchema],
   customHistory: [customRequestSchema], // <-- Add this
+measurements: [{ type: mongoose.Schema.Types.ObjectId, ref: "Measurement" }],
 
   profileImage: {
     type: String,

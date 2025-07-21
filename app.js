@@ -8,6 +8,7 @@ const orderRouter = require("./routes/orderRouter");
 const tailorRouter = require("./routes/tailorRouter");
 const clothRouter = require("./routes/clothRouter");
 const customizeRouter = require("./routes/customizeRouter");
+const measurementRouter=require("./routes/measurementRouter")
 const flash = require("connect-flash");
 const expressSession = require("express-session");
 const chatRouter=require('./routes/chatRouter')
@@ -50,7 +51,8 @@ app.use("/orders", orderRouter);
 app.use("/cloths", clothRouter);
 app.use("/tailors", tailorRouter);
 app.use("/custom",customizeRouter);
-app.use("/api/chat",chatRouter)
+app.use("/measurements",measurementRouter);
+app.use("/api/chat",chatRouter);
 
 
 
