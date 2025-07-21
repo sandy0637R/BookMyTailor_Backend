@@ -17,20 +17,23 @@ const measurementSchema = new mongoose.Schema(
       required: true,
     },
     measurements: {
-      chest: { type: Number },
+      // Shared fields
       waist: { type: Number },
-      hips: { type: Number },
-      shoulder: { type: Number },
-      sleeveLength: { type: Number },
-      neck: { type: Number },
+      hip: { type: Number },
       inseam: { type: Number },
-      length: { type: Number },
-      bust: { type: Number },
-      armhole: { type: Number },
-      wrist: { type: Number },
+      rise: { type: Number },
       thigh: { type: Number },
-      ankle: { type: Number },
-      knee: { type: Number },
+
+      // Male-specific
+      chest: { type: Number },
+      shoulderWidth: { type: Number },
+      sleeveLength: { type: Number },
+      shirtLength: { type: Number },
+      neck: { type: Number },
+
+      // Female-specific
+      bust: { type: Number },
+      topLength: { type: Number },
     },
   },
   { timestamps: true }
