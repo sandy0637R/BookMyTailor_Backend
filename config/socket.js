@@ -2,7 +2,8 @@ const Chat = require("../models/Chat");
 
 module.exports = function (io) {
   io.on("connection", (socket) => {
-    const userId = String(socket.user?._id);
+    const userId = String(socket.handshake.auth.userId || socket.handshake.query.userId);
+
 
     if (!userId) {
       console.error("❌ No user found on socket connection.");
