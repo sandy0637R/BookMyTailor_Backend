@@ -43,3 +43,41 @@ exports.markAsRead = async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 };
+
+// ✅ Get list of users the current user has chatted with
+exports.getChatUsers = async (req, res) => {
+  try {
+    const currentUserId = req.user._id;
+
+    // Find distinct users where current user is sender or receiver
+    const chats = await Chat.find({
+      $or: [{ sender: currentUserId }, { receiver: currentUserId }],
+    })
+      .sort({ timestamp: -1 }) // Latest first
+      .populate("sender", "name profileImage")
+      .populate("receiver", "name profileImage");
+
+    const userMap = new Map();
+
+    chats.forEach(chat => {
+      const otherUser =
+        chat.sender._id.toString() === currentUserId.toString()
+          ? chat.receiver
+          : chat.sender;
+
+      if (!userMap.has(otherUser._id.toString())) {
+        userMap.set(otherUser._id.toString(), {
+          user: otherUser,
+          lastMessage: chat.message,
+          timestamp: chat.timestamp,
+        });
+      }
+    });
+
+    const result = Array.from(userMap.values());
+    res.json(result);
+  } catch (error) {
+    console.error("Error fetching chat users:", error.message);
+    res.status(500).json({ message: "Failed to fetch chat users" });
+  }
+};
