@@ -81,3 +81,33 @@ exports.getChatUsers = async (req, res) => {
     res.status(500).json({ message: "Failed to fetch chat users" });
   }
 };
+
+exports.sendMessage = async (req, res) => {
+  try {
+    const { sender, receiver, message } = req.body;
+
+    if (!sender || !receiver || !message) {
+      return res.status(400).json({ error: "All fields are required" });
+    }
+
+    const newMessage = new Chat({
+      sender,
+      receiver,
+      message,
+      timestamp: new Date(),
+      read: false,
+    });
+
+    const savedMessage = await newMessage.save();
+
+    // ✅ Emit via socket (optional, if setup)
+    if (req.app.get("io")) {
+      req.app.get("io").to(receiver).emit("newMessage", savedMessage);
+    }
+
+    res.status(201).json(savedMessage);
+  } catch (error) {
+    console.error("Error sending message:", error);
+    res.status(500).json({ error: "Failed to send message" });
+  }
+};
