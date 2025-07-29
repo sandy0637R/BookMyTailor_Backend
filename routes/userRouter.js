@@ -26,10 +26,7 @@ const{getFollowingList,getUsersWhoRatedTailor}=require("../controllers/tailorCon
 
 const isLoggedin = require("../middleware/isLoggedin");
 
-// Test Route
-router.get("/", (req, res) => {
-  res.send("hey its working");
-});
+
 
 // Auth Routes
 router.post("/register", registerUser);

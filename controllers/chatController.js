@@ -111,3 +111,40 @@ exports.sendMessage = async (req, res) => {
     res.status(500).json({ error: "Failed to send message" });
   }
 };
+
+// Start a new chat between two users (even if no message sent yet)
+exports.startChat = async (req, res) => {
+  try {
+    const { sender, receiver } = req.body;
+
+    if (!sender || !receiver || sender === receiver) {
+      return res.status(400).json({ error: "Invalid sender or receiver" });
+    }
+
+    // Check if any previous chat exists
+    const existingChat = await Chat.findOne({
+      $or: [
+        { sender, receiver },
+        { sender: receiver, receiver: sender }
+      ]
+    });
+
+    if (existingChat) {
+      return res.status(200).json({ success: true, message: "Chat already exists" });
+    }
+
+    // Create a dummy entry to start chat
+    const newChat = new Chat({
+      sender,
+      receiver,
+      message: "", // Placeholder
+    });
+
+    await newChat.save();
+
+    res.status(201).json({ success: true, message: "Chat started successfully" });
+  } catch (error) {
+    console.error("Error starting chat:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+};
