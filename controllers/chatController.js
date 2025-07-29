@@ -28,6 +28,7 @@ exports.getConversation = async (req, res) => {
 exports.markAsRead = async (req, res) => {
   try {
     const { messageIds } = req.body;
+     console.log("📥 Backend received messageIds:", messageIds); // Debug
     if (!messageIds || !Array.isArray(messageIds)) {
       return res.status(400).json({ error: 'Invalid message IDs' });
     }
@@ -36,6 +37,7 @@ exports.markAsRead = async (req, res) => {
       { _id: { $in: messageIds } },
       { $set: { read: true } }
     );
+    console.log("✅ Mongo update result:", result);
 
     res.json({ success: true, updated: result.modifiedCount });
   } catch (error) {
@@ -49,7 +51,6 @@ exports.getChatUsers = async (req, res) => {
   try {
     const currentUserId = req.user._id;
 
-    // Find distinct users where current user is sender or receiver
     const chats = await Chat.find({
       $or: [{ sender: currentUserId }, { receiver: currentUserId }],
     })
@@ -58,6 +59,7 @@ exports.getChatUsers = async (req, res) => {
       .populate("receiver", "name profileImage");
 
     const userMap = new Map();
+    const unreadCounts = {};
 
     chats.forEach(chat => {
       const otherUser =
@@ -65,22 +67,40 @@ exports.getChatUsers = async (req, res) => {
           ? chat.receiver
           : chat.sender;
 
-      if (!userMap.has(otherUser._id.toString())) {
-        userMap.set(otherUser._id.toString(), {
+      const otherUserId = otherUser._id.toString();
+
+      // Fill chat user info if not already set
+      if (!userMap.has(otherUserId)) {
+        userMap.set(otherUserId, {
           user: otherUser,
           lastMessage: chat.message,
           timestamp: chat.timestamp,
         });
       }
+
+      // ✅ Count unread messages correctly
+      if (
+  chat.receiver._id.toString() === currentUserId.toString() &&
+  !chat.read
+) {
+  unreadCounts[otherUserId] = (unreadCounts[otherUserId] || 0) + 1;
+}
+
     });
 
     const result = Array.from(userMap.values());
-    res.json(result);
+
+    res.json({
+      chatUsers: result,
+      unreadCounts,
+    });
   } catch (error) {
     console.error("Error fetching chat users:", error.message);
     res.status(500).json({ message: "Failed to fetch chat users" });
   }
 };
+
+
 
 exports.sendMessage = async (req, res) => {
   try {
@@ -137,7 +157,7 @@ exports.startChat = async (req, res) => {
     const newChat = new Chat({
       sender,
       receiver,
-      message: "", // Placeholder
+      message: "hi", 
     });
 
     await newChat.save();
