@@ -1,26 +1,32 @@
-const Chat = require('../models/Chat');
+const Chat = require("../models/Chat");
 
 // Get conversation between two users
 exports.getConversation = async (req, res) => {
   try {
     const { userId1, userId2 } = req.params;
-    if (!userId1 || !userId2 || userId1 === 'undefined' || userId2 === 'undefined' || userId1 === userId2) {
-      return res.status(400).json({ error: 'Invalid user IDs' });
+    if (
+      !userId1 ||
+      !userId2 ||
+      userId1 === "undefined" ||
+      userId2 === "undefined" ||
+      userId1 === userId2
+    ) {
+      return res.status(400).json({ error: "Invalid user IDs" });
     }
 
     const messages = await Chat.find({
       $or: [
         { sender: userId1, receiver: userId2 },
-        { sender: userId2, receiver: userId1 }
-      ]
+        { sender: userId2, receiver: userId1 },
+      ],
     })
-    .sort({ timestamp: 1 })
-    .populate('sender receiver', 'name email profileImage');
+      .sort({ timestamp: 1 })
+      .populate("sender receiver", "name email profileImage");
 
     res.json(messages);
   } catch (error) {
-    console.error('Error fetching conversation:', error);
-    res.status(500).json({ error: 'Server error' });
+    console.error("Error fetching conversation:", error);
+    res.status(500).json({ error: "Server error" });
   }
 };
 
@@ -28,9 +34,9 @@ exports.getConversation = async (req, res) => {
 exports.markAsRead = async (req, res) => {
   try {
     const { messageIds } = req.body;
-     console.log("📥 Backend received messageIds:", messageIds); // Debug
+    console.log("📥 Backend received messageIds:", messageIds); // Debug
     if (!messageIds || !Array.isArray(messageIds)) {
-      return res.status(400).json({ error: 'Invalid message IDs' });
+      return res.status(400).json({ error: "Invalid message IDs" });
     }
 
     const result = await Chat.updateMany(
@@ -41,8 +47,8 @@ exports.markAsRead = async (req, res) => {
 
     res.json({ success: true, updated: result.modifiedCount });
   } catch (error) {
-    console.error('Error marking messages as read:', error);
-    res.status(500).json({ error: 'Server error' });
+    console.error("Error marking messages as read:", error);
+    res.status(500).json({ error: "Server error" });
   }
 };
 
@@ -61,7 +67,7 @@ exports.getChatUsers = async (req, res) => {
     const userMap = new Map();
     const unreadCounts = {};
 
-    chats.forEach(chat => {
+    chats.forEach((chat) => {
       const otherUser =
         chat.sender._id.toString() === currentUserId.toString()
           ? chat.receiver
@@ -80,12 +86,11 @@ exports.getChatUsers = async (req, res) => {
 
       // ✅ Count unread messages correctly
       if (
-  chat.receiver._id.toString() === currentUserId.toString() &&
-  !chat.read
-) {
-  unreadCounts[otherUserId] = (unreadCounts[otherUserId] || 0) + 1;
-}
-
+        chat.receiver._id.toString() === currentUserId.toString() &&
+        !chat.read
+      ) {
+        unreadCounts[otherUserId] = (unreadCounts[otherUserId] || 0) + 1;
+      }
     });
 
     const result = Array.from(userMap.values());
@@ -99,8 +104,6 @@ exports.getChatUsers = async (req, res) => {
     res.status(500).json({ message: "Failed to fetch chat users" });
   }
 };
-
-
 
 exports.sendMessage = async (req, res) => {
   try {
@@ -145,24 +148,28 @@ exports.startChat = async (req, res) => {
     const existingChat = await Chat.findOne({
       $or: [
         { sender, receiver },
-        { sender: receiver, receiver: sender }
-      ]
+        { sender: receiver, receiver: sender },
+      ],
     });
 
     if (existingChat) {
-      return res.status(200).json({ success: true, message: "Chat already exists" });
+      return res
+        .status(200)
+        .json({ success: true, message: "Chat already exists" });
     }
 
     // Create a dummy entry to start chat
     const newChat = new Chat({
       sender,
       receiver,
-      message: "hi", 
+      message: "hi",
     });
 
     await newChat.save();
 
-    res.status(201).json({ success: true, message: "Chat started successfully" });
+    res
+      .status(201)
+      .json({ success: true, message: "Chat started successfully" });
   } catch (error) {
     console.error("Error starting chat:", error);
     res.status(500).json({ error: "Server error" });
