@@ -9,6 +9,8 @@ const tailorDetailsSchema = new mongoose.Schema(
     fees: Number,
     topDesigns: [String],
     posts: [PostSchema],
+    cloths: [{ type: mongoose.Schema.Types.ObjectId, ref: "Cloth" }],
+
     description: String,
     followers: [
       {

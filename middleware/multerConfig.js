@@ -41,12 +41,25 @@ function createCustomImageUpload() {
   return multer({ storage });
 }
 
+function createClothImageUpload() {
+  const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+      cb(null, 'uploads/clothImages');
+    },
+    filename: function (req, file, cb) {
+      cb(null, Date.now() + path.extname(file.originalname));
+    }
+  });
 
-// ✅ Expose 'uploads' directory globally in main server file (for example in server.js or app.js):
-// app.use('/uploads', express.static('uploads'));
+  return multer({ storage });
+}
+
+
+
 
 module.exports = {
   createProfileImageUpload,
   createPostImageUpload,
   createCustomImageUpload,
+  createClothImageUpload, 
 };
