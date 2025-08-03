@@ -4,16 +4,17 @@ const fs = require("fs");
 
 exports.getAllCloths = async (req, res) => {
   try {
-    const cloths = await Cloth.find();
+    const cloths = await Cloth.find().populate("tailor", "name"); // 👈 Add this
     res.status(200).json(cloths);
   } catch (error) {
     res.status(500).json({ message: "Error fetching cloths", error });
   }
 };
 
+
 exports.getClothById = async (req, res) => {
   try {
-    const cloth = await Cloth.findById(req.params.id);
+    const cloth = await Cloth.findById(req.params.id).populate("tailor", "name"); // 👈 Add this
     if (!cloth) {
       return res.status(404).json({ message: "Cloth not found" });
     }
@@ -111,9 +112,10 @@ exports.getClothsByTailor = async (req, res) => {
       return res.status(403).json({ message: "Only tailors can view their clothes." });
     }
 
-    const cloths = await Cloth.find({ tailor: req.user._id });
+    const cloths = await Cloth.find({ tailor: req.user._id }).populate("tailor", "name"); // 👈 Add this
     res.status(200).json(cloths);
   } catch (error) {
     res.status(500).json({ message: "Error fetching tailor's clothes", error: error.message });
   }
 };
+
