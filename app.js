@@ -13,7 +13,9 @@ const flash = require("connect-flash");
 const expressSession = require("express-session");
 const chatRouter=require('./routes/chatRouter')
 const indexRouter = require("./routes/index");
+const adminRouter = require("./routes/adminRouter")
 const db = require("./config/mongoose-connection");
+
 require("dotenv").config();
 
 app.use(cors({
@@ -53,6 +55,7 @@ app.use("/tailors", tailorRouter);
 app.use("/custom",customizeRouter);
 app.use("/measurements",measurementRouter);
 app.use("/api/chat",chatRouter);
+app.use("/admin",adminRouter)
 
 
 

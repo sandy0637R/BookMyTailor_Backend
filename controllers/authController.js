@@ -3,10 +3,12 @@ const bcryptjs = require("bcryptjs");
 const { generateToken } = require("../utils/generateToken");
 const path = require("path");
 const fs = require("fs");
-const postService=require("./postService")
+const postService = require("./postService");
 
-const { createProfileImageUpload, createPostImageUpload } = require("../middleware/multerConfig");
-
+const {
+  createProfileImageUpload,
+  createPostImageUpload,
+} = require("../middleware/multerConfig");
 
 // Multer middleware setup
 const uploadImage = createProfileImageUpload();
@@ -18,7 +20,14 @@ module.exports.uploadPostImages = uploadPostImages.array("images", 5);
 // Register User
 module.exports.registerUser = async function (req, res) {
   try {
-    let { name, email, password, wishlist, orders, roles = ["customer"] } = req.body;
+    let {
+      name,
+      email,
+      password,
+      wishlist,
+      orders,
+      roles = ["customer"],
+    } = req.body;
 
     console.log("Request Body:", req.body);
 
@@ -88,16 +97,24 @@ module.exports.loginUser = async function (req, res) {
     const isAdminLogin = role === "admin";
 
     if (isAdminInDB && !isAdminLogin) {
-      return res.status(403).json({ message: "You are an admin. Please select 'Login as Admin'." });
+      return res
+        .status(403)
+        .json({ message: "You are an admin. Please select 'Login as Admin'." });
     }
 
     if (!isAdminInDB && isAdminLogin) {
       return res.status(403).json({ message: "You are not an admin." });
     }
 
+    if (user.blocked) {
+      return res.status(403).json({ message: "User is blocked." });
+    }
+
     bcryptjs.compare(password, user.password, function (err, result) {
       if (err) {
-        return res.status(500).json({ message: "Server error, please try again later." });
+        return res
+          .status(500)
+          .json({ message: "Server error, please try again later." });
       }
 
       if (result) {
@@ -138,7 +155,9 @@ module.exports.getProfile = async function (req, res) {
 
 exports.getUserById = async (req, res) => {
   try {
-    const user = await userModel.findById(req.params.id).select("name email roles profileImage address following");
+    const user = await userModel
+      .findById(req.params.id)
+      .select("name email roles profileImage address following");
     if (!user) return res.status(404).json({ message: "User not found" });
     res.status(200).json(user);
   } catch (error) {
@@ -158,15 +177,15 @@ module.exports.updateProfile = async function (req, res) {
     if (!user.roles) user.roles = ["customer"];
 
     // ✅ Fix: Ensure tailorDetails added only when all fields are valid
-    const incomingRoles = (updates.roles || updates.role || []).map(r => r.toLowerCase());
-    const isAddingTailor = incomingRoles.includes("tailor") && !user.roles.includes("tailor");
+    const incomingRoles = (updates.roles || updates.role || []).map((r) =>
+      r.toLowerCase()
+    );
+    const isAddingTailor =
+      incomingRoles.includes("tailor") && !user.roles.includes("tailor");
 
     if (isAddingTailor) {
       const { specialization, fees, description } = updates.tailorDetails || {};
-      if (
-        specialization !== undefined &&
-        fees !== undefined
-      ) {
+      if (specialization !== undefined && fees !== undefined) {
         user.tailorDetails = {
           specialization,
           fees,
@@ -205,9 +224,6 @@ module.exports.updateProfile = async function (req, res) {
     res.status(500).send("Server error.");
   }
 };
-
-
-
 
 // Delete Profile Image
 module.exports.deleteProfileImage = async function (req, res) {
@@ -275,14 +291,18 @@ module.exports.updatePost = async function (req, res) {
     // Pass full file objects, not only paths
     const images = req.files && req.files.length > 0 ? req.files : [];
 
-    const result = await postService.updatePost(userId, postId, updateData, images);
+    const result = await postService.updatePost(
+      userId,
+      postId,
+      updateData,
+      images
+    );
     res.status(200).json({ message: "Post updated", post: result });
   } catch (err) {
     console.error(err);
     res.status(500).send("Server error");
   }
 };
-
 
 module.exports.deletePost = async function (req, res) {
   try {
@@ -295,8 +315,6 @@ module.exports.deletePost = async function (req, res) {
     res.status(500).json({ error: err.message || "Unknown error" });
   }
 };
-
-
 
 module.exports.getAllPosts = async function (req, res) {
   try {
@@ -314,7 +332,8 @@ exports.addToWishlist = async (req, res) => {
     const userId = req.user._id;
     const { itemId } = req.body;
 
-    if (!itemId) return res.status(400).json({ message: "Item ID is required" });
+    if (!itemId)
+      return res.status(400).json({ message: "Item ID is required" });
 
     const user = await userModel.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
@@ -326,24 +345,30 @@ exports.addToWishlist = async (req, res) => {
     user.wishlist.push(itemId);
     await user.save();
 
-    res.status(200).json({ success: true, message: "Item added to wishlist", wishlist: user.wishlist });
+    res
+      .status(200)
+      .json({
+        success: true,
+        message: "Item added to wishlist",
+        wishlist: user.wishlist,
+      });
   } catch (err) {
     console.error("Error in addToWishlist:", err);
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
 
-
-
 exports.removeFromWishlist = async (req, res) => {
   try {
     const user = await userModel.findById(req.user._id);
     const itemId = req.params.itemId;
 
-    user.wishlist = user.wishlist.filter(id => id.toString() !== itemId);
+    user.wishlist = user.wishlist.filter((id) => id.toString() !== itemId);
     await user.save();
 
-    res.status(200).json({ message: "Removed from wishlist", wishlist: user.wishlist });
+    res
+      .status(200)
+      .json({ message: "Removed from wishlist", wishlist: user.wishlist });
   } catch (err) {
     console.error("Error in removeFromWishlist:", err);
     res.status(500).send("Server error");
@@ -365,8 +390,8 @@ exports.addToCart = async (req, res) => {
     }
 
     // Safely find existing item in cart
-    const existingItem = user.cart.find(entry => 
-      entry.item && entry.item.toString() === itemId
+    const existingItem = user.cart.find(
+      (entry) => entry.item && entry.item.toString() === itemId
     );
 
     if (existingItem) {
@@ -389,9 +414,10 @@ exports.addToCart = async (req, res) => {
       );
     }
 
-    const updatedUser = await userModel.findById(req.user._id)
-      .populate('cart.item') // Consider populating the item details
-      .populate('wishlist');
+    const updatedUser = await userModel
+      .findById(req.user._id)
+      .populate("cart.item") // Consider populating the item details
+      .populate("wishlist");
 
     res.status(200).json({
       message: "Item added to cart",
@@ -403,10 +429,6 @@ exports.addToCart = async (req, res) => {
     res.status(500).json({ message: "Server error", error: err.message });
   }
 };
-
-
-
-
 
 exports.removeFromCart = async (req, res) => {
   try {
@@ -435,5 +457,3 @@ exports.removeFromCart = async (req, res) => {
     res.status(500).send("Server error");
   }
 };
-
-

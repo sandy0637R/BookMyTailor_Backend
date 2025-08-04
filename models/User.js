@@ -34,6 +34,11 @@ const userSchema = new mongoose.Schema({
   name: String,
   email: String,
   password: String,
+  blocked: {
+  type: Boolean,
+  default: false,
+},
+
   roles: {
     type: [String],
     enum: ["customer", "tailor", "admin"],
