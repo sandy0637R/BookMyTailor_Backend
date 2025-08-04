@@ -1,4 +1,5 @@
 const User = require("../models/User");
+const Cloth = require("../models/Cloths");
 
 // Get user counts based on roles
 exports.getUserStats = async (req, res) => {
@@ -7,15 +8,23 @@ exports.getUserStats = async (req, res) => {
     const onlyCustomers = await User.countDocuments({ roles: ["customer"] });
     const tailors = await User.countDocuments({ roles: { $in: ["tailor"] } });
 
+    const users = await User.find({ "tailorDetails.posts": { $exists: true } }, "tailorDetails.posts");
+    const totalPosts = users.reduce((sum, user) => {
+      const posts = user.tailorDetails?.posts || [];
+      return sum + posts.length;
+    }, 0);
+
     res.status(200).json({
       totalUsers,
       onlyCustomers,
       tailors,
+      totalPosts,
     });
   } catch (err) {
     res.status(500).json({ message: "Error fetching user stats", error: err });
   }
 };
+
 
 exports.getAllUsers = async (req, res) => {
   try {
@@ -53,5 +62,47 @@ exports.unblockUser = async (req, res) => {
     res.status(200).json({ message: "User unblocked", user });
   } catch (err) {
     res.status(500).json({ message: "Error unblocking user", error: err });
+  }
+};
+
+// Get all cloths
+exports.getAllCloths = async (req, res) => {
+  try {
+    const cloths = await Cloth.find().populate("tailor", "name email");
+    res.status(200).json(cloths);
+  } catch (err) {
+    res.status(500).json({ message: "Error fetching cloths", error: err });
+  }
+};
+
+// Edit a cloth by ID
+exports.editCloth = async (req, res) => {
+  const { clothId } = req.params;
+  const updatedData = req.body;
+  try {
+    const updatedCloth = await Cloth.findByIdAndUpdate(clothId, updatedData, { new: true });
+    if (!updatedCloth) return res.status(404).json({ message: "Cloth not found" });
+    res.status(200).json({ message: "Cloth updated", cloth: updatedCloth });
+  } catch (err) {
+    res.status(500).json({ message: "Error updating cloth", error: err });
+  }
+};
+
+// Delete a cloth by ID
+exports.deleteCloth = async (req, res) => {
+  const { clothId } = req.params;
+  try {
+    const deletedCloth = await Cloth.findByIdAndDelete(clothId);
+    if (!deletedCloth) return res.status(404).json({ message: "Cloth not found" });
+
+    // Also remove reference from User.tailorDetails.cloths
+    await User.updateMany(
+      { "tailorDetails.cloths": clothId },
+      { $pull: { "tailorDetails.cloths": clothId } }
+    );
+
+    res.status(200).json({ message: "Cloth deleted", cloth: deletedCloth });
+  } catch (err) {
+    res.status(500).json({ message: "Error deleting cloth", error: err });
   }
 };

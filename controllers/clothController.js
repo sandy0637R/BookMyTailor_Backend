@@ -57,8 +57,8 @@ exports.updateCloth = async (req, res) => {
   try {
     const { id } = req.params;
 
-    if (!req.user || !req.user.roles.includes("tailor")) {
-      return res.status(403).json({ message: "Only tailors can update clothes." });
+    if (!req.user || (!req.user.roles.includes("tailor") && !req.user.roles.includes("admin"))) {
+      return res.status(403).json({ message: "Only tailors or admins can update clothes." });
     }
 
     const existingCloth = await Cloth.findById(id);
@@ -85,12 +85,13 @@ exports.updateCloth = async (req, res) => {
   }
 };
 
+
 exports.deleteCloth = async (req, res) => {
   try {
     const { id } = req.params;
 
-    if (!req.user || !req.user.roles.includes("tailor")) {
-      return res.status(403).json({ message: "Only tailors can delete clothes." });
+    if (!req.user || (!req.user.roles.includes("tailor") && !req.user.roles.includes("admin"))) {
+      return res.status(403).json({ message: "Only tailors or admins can delete clothes." });
     }
 
     const cloth = await Cloth.findById(id);
@@ -105,6 +106,7 @@ exports.deleteCloth = async (req, res) => {
     res.status(500).json({ message: "Error deleting cloth", error: error.message });
   }
 };
+
 
 exports.getClothsByTailor = async (req, res) => {
   try {
