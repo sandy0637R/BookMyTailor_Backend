@@ -18,6 +18,9 @@ const {
   addToCart,
   removeFromCart,
   getUserById,
+  // getUserCart,
+  clearUserCart,
+  
 } = require("../controllers/authController");
 
 
@@ -56,8 +59,11 @@ router.post("/cart", isLoggedin, addToCart); // expects { itemId } in body
 router.delete("/cart/:itemId", isLoggedin, removeFromCart);        // Fro
 router.get("/tailors/:tailorId/rated-users", isLoggedin,getUsersWhoRatedTailor);
 router.get("/:userId/following", isLoggedin,getFollowingList);
+// router.get('/cart/:id',isLoggedin, getUserCart);
+
 
 router.get("/:id", isLoggedin, getUserById);
+router.delete('/cart/clear/:id',isLoggedin ,clearUserCart);
 
 
 

@@ -59,7 +59,7 @@ const userSchema = new mongoose.Schema({
       quantity: { type: Number, default: 1, min: 1 },
     },
   ],
-  orders: [],
+  orders: [{ type: mongoose.Schema.Types.ObjectId, ref: "Order" }],
   customDressRequests: [customRequestSchema],
   customHistory: [customRequestSchema], // <-- Add this
 measurements: [{ type: mongoose.Schema.Types.ObjectId, ref: "Measurement" }],

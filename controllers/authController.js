@@ -457,3 +457,39 @@ exports.removeFromCart = async (req, res) => {
     res.status(500).send("Server error");
   }
 };
+
+// exports.getUserCart = async (req, res) => {
+//   try {
+//     const userId = req.params.id;
+//     const user = await User.findById(userId).populate('cart.item');
+
+//     if (!user) return res.status(404).json({ message: "User not found" });
+
+//     res.status(200).json({ cart: user.cart });
+//   } catch (error) {
+//     res.status(500).json({ message: "Server error", error });
+//   }
+// };
+
+exports.clearUserCart = async (req, res) => {
+  try {
+    const userId = req.params.id;
+
+    // Check if logged-in user matches the user being modified or is an admin
+    if (req.user._id.toString() !== userId && !req.user.roles.includes("admin")) {
+      return res.status(403).json({ message: "Unauthorized access." });
+    }
+
+    const user = await userModel.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    user.cart = []; // Clear the cart
+    await user.save();
+
+    res.status(200).json({ message: "Cart cleared successfully", cart: user.cart });
+  } catch (error) {
+    console.error("Error clearing cart:", error);
+    res.status(500).json({ message: "Failed to clear cart", error: error.message });
+  }
+};
+
