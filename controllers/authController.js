@@ -207,6 +207,12 @@ module.exports.updateProfile = async function (req, res) {
       };
     }
 
+    Object.keys(updates).forEach((key) => {
+  if (!["roles", "tailorDetails"].includes(key)) {
+    user[key] = updates[key];
+  }
+});
+
     // ✅ Save uploaded profile image if exists
     if (req.file) {
       user.profileImage = req.file.path;
