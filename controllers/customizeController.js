@@ -13,7 +13,7 @@ exports.createCustomRequest = async (req, res) => {
       budget,
       duration,
       description,
-      quantity, // added
+      quantity, 
       tailorId,
     } = req.body;
 
@@ -156,8 +156,11 @@ exports.updateRequestStatus = async (req, res) => {
 
     // ✅ Store delivered date if not already set
     if (status === "Delivered" && !request.deliveredAt) {
-      request.deliveredAt = new Date();
-    }
+  const deliveredDate = new Date();
+  request.deliveredAt = deliveredDate;
+  accepted.deliveredAt = deliveredDate; // ✅ Add this line
+}
+
 
     await customer.save();
     await tailor.save();
