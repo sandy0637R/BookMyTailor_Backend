@@ -38,3 +38,32 @@ exports.getUserOrders = async (req, res) => {
     res.status(500).json({ message: "Failed to fetch your orders" });
   }
 };
+
+exports.deleteOrder = async (req, res) => {
+  const orderId = req.params.id;
+  const userId = req.user.id;
+
+  try {
+    const order = await Order.findOne({ _id: orderId, user: userId });
+
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    if (order.deliveryStatus !== "Pending") {
+      return res.status(400).json({ message: "Only pending orders can be deleted" });
+    }
+
+    await Order.findByIdAndDelete(orderId);
+
+   
+    await User.findByIdAndUpdate(userId, {
+      $pull: { orders: orderId },
+    });
+
+    res.status(200).json({ message: "Order deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting order:", error);
+    res.status(500).json({ message: "Failed to delete order" });
+  }
+};

@@ -122,6 +122,7 @@ exports.getAllOrders = async (req, res) => {
 };
 
 // Update delivery status of an order
+// Update delivery status of an order
 exports.updateOrderStatus = async (req, res) => {
   const { orderId } = req.params;
   const { deliveryStatus } = req.body;
@@ -139,9 +140,18 @@ exports.updateOrderStatus = async (req, res) => {
   }
 
   try {
+    // If status is "Delivered", set deliveredAt date
+    const updateData = {
+      deliveryStatus,
+    };
+
+    if (deliveryStatus === "Delivered") {
+      updateData.deliveredAt = new Date();
+    }
+
     const updatedOrder = await Order.findByIdAndUpdate(
       orderId,
-      { deliveryStatus },
+      updateData,
       { new: true }
     )
       .populate("user", "name email")
@@ -160,4 +170,5 @@ exports.updateOrderStatus = async (req, res) => {
     res.status(500).json({ message: "Failed to update delivery status" });
   }
 };
+
 
