@@ -14,6 +14,11 @@ const orderSchema = new mongoose.Schema({
   paymentMode: String,
   totalAmount: Number,
   createdAt: { type: Date, default: Date.now },
+  deliveryStatus: {
+    type: String,
+    enum: ["Pending", "Shipped", "Out for Delivery", "Delivered", "Cancelled"],
+    default: "Pending",
+  },
 });
 
 module.exports=mongoose.model("Order", orderSchema);

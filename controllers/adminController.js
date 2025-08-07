@@ -1,5 +1,6 @@
 const User = require("../models/User");
 const Cloth = require("../models/Cloths");
+const Order =require("../models/Order")
 
 // Get user counts based on roles
 exports.getUserStats = async (req, res) => {
@@ -106,3 +107,57 @@ exports.deleteCloth = async (req, res) => {
     res.status(500).json({ message: "Error deleting cloth", error: err });
   }
 };
+
+exports.getAllOrders = async (req, res) => {
+  try {
+    const orders = await Order.find()
+      .populate("user", "name email") 
+      .populate("items.product", "name price"); 
+
+    res.status(200).json(orders);
+  } catch (error) {
+    console.error("Error fetching all orders:", error);
+    res.status(500).json({ message: "Failed to fetch all orders" });
+  }
+};
+
+// Update delivery status of an order
+exports.updateOrderStatus = async (req, res) => {
+  const { orderId } = req.params;
+  const { deliveryStatus } = req.body;
+
+  const validStatuses = [
+    "Pending",
+    "Shipped",
+    "Out for Delivery",
+    "Delivered",
+    "Cancelled",
+  ];
+
+  if (!validStatuses.includes(deliveryStatus)) {
+    return res.status(400).json({ message: "Invalid delivery status" });
+  }
+
+  try {
+    const updatedOrder = await Order.findByIdAndUpdate(
+      orderId,
+      { deliveryStatus },
+      { new: true }
+    )
+      .populate("user", "name email")
+      .populate("items.product", "name price");
+
+    if (!updatedOrder) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    res.status(200).json({
+      message: "Delivery status updated",
+      order: updatedOrder,
+    });
+  } catch (error) {
+    console.error("Error updating delivery status:", error);
+    res.status(500).json({ message: "Failed to update delivery status" });
+  }
+};
+
