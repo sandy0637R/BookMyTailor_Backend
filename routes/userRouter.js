@@ -66,6 +66,4 @@ router.get("/:id", isLoggedin, getUserById);
 router.delete('/cart/clear/:id',isLoggedin ,clearUserCart);
 
 
-
-
 module.exports = router;

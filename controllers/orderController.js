@@ -67,3 +67,40 @@ exports.deleteOrder = async (req, res) => {
     res.status(500).json({ message: "Failed to delete order" });
   }
 };
+
+exports.getTopCloths = async (req, res) => {
+  try {
+    const topCloths = await Order.aggregate([
+      { $unwind: "$items" }, // Flatten items array
+      { $group: { _id: "$items.product", count: { $sum: "$items.quantity" } } }, // Count total quantity ordered per cloth
+      { $sort: { count: -1 } }, // Sort descending by count
+      { $limit: 5 }, // Top 5
+      {
+        $lookup: {
+          from: "cloths", // MongoDB collection name
+          localField: "_id",
+          foreignField: "_id",
+          as: "clothDetails",
+        },
+      },
+      { $unwind: "$clothDetails" }, // Flatten clothDetails
+      {
+        $project: {
+          _id: 0,
+          clothId: "$clothDetails._id",
+          name: "$clothDetails.name",
+          type: "$clothDetails.type",
+          tailor: "$clothDetails.tailor",
+          price: "$clothDetails.price",
+          image: "$clothDetails.image",
+          orderedCount: "$count",
+        },
+      },
+    ]);
+
+    res.status(200).json(topCloths);
+  } catch (error) {
+    console.error("Error fetching top cloths:", error);
+    res.status(500).json({ message: "Failed to fetch top cloths" });
+  }
+};
