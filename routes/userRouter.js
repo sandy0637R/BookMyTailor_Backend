@@ -7,7 +7,7 @@ const {
   updateProfile,
   uploadImage,
   deleteProfileImage,
-  checkAdmin, // New method for deleting profile image
+  checkAdmin, 
   addPost,
   updatePost,
   deletePost,
@@ -18,7 +18,6 @@ const {
   addToCart,
   removeFromCart,
   getUserById,
-  // getUserCart,
   clearUserCart,
   
 } = require("../controllers/authController");
@@ -37,10 +36,10 @@ router.post("/login", loginUser);
 
 // Protected Routes
 router.get("/profile", isLoggedin, getProfile);
-router.put("/profile", isLoggedin, uploadImage, updateProfile); // ⬅️ Image upload + profile update
+router.put("/profile", isLoggedin, uploadImage, updateProfile);
 
 // Route to delete profile image
-router.delete("/profile/image", isLoggedin, deleteProfileImage); // Route to handle profile image deletion
+router.delete("/profile/image", isLoggedin, deleteProfileImage); 
 
 // GET /users/admin-exists
 router.get("/admin-exists",checkAdmin);
@@ -51,15 +50,14 @@ router.put("/post/:postId", isLoggedin, uploadPostImages, updatePost);
 router.delete("/post/:postId", isLoggedin, deletePost);
 router.get("/posts", isLoggedin, getAllPosts);
 
-router.post("/wishlist", isLoggedin, addToWishlist); // expects { itemId } in body
+router.post("/wishlist", isLoggedin, addToWishlist); 
 router.delete("/wishlist/:itemId", isLoggedin, removeFromWishlist);
 
-// ✅ Cart routes — match frontend (POST with body, DELETE with param)
-router.post("/cart", isLoggedin, addToCart); // expects { itemId } in body
-router.delete("/cart/:itemId", isLoggedin, removeFromCart);        // Fro
+// ✅ Cart routes 
+router.post("/cart", isLoggedin, addToCart); 
+router.delete("/cart/:itemId", isLoggedin, removeFromCart);        
 router.get("/tailors/:tailorId/rated-users", isLoggedin,getUsersWhoRatedTailor);
 router.get("/:userId/following", isLoggedin,getFollowingList);
-// router.get('/cart/:id',isLoggedin, getUserCart);
 
 
 router.get("/:id", isLoggedin, getUserById);

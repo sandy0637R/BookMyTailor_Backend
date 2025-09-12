@@ -1,6 +1,6 @@
 const User = require("../models/User");
 const Cloth = require("../models/Cloths");
-const Order =require("../models/Order")
+const Order = require("../models/Order");
 
 // Get user counts based on roles
 exports.getUserStats = async (req, res) => {
@@ -9,7 +9,10 @@ exports.getUserStats = async (req, res) => {
     const onlyCustomers = await User.countDocuments({ roles: ["customer"] });
     const tailors = await User.countDocuments({ roles: { $in: ["tailor"] } });
 
-    const users = await User.find({ "tailorDetails.posts": { $exists: true } }, "tailorDetails.posts");
+    const users = await User.find(
+      { "tailorDetails.posts": { $exists: true } },
+      "tailorDetails.posts"
+    );
     const totalPosts = users.reduce((sum, user) => {
       const posts = user.tailorDetails?.posts || [];
       return sum + posts.length;
@@ -26,15 +29,15 @@ exports.getUserStats = async (req, res) => {
   }
 };
 
-
 exports.getAllUsers = async (req, res) => {
   try {
-    const users = await User.find().select("-password"); // exclude password
+    const users = await User.find().select("-password");
     res.status(200).json(users);
   } catch (err) {
     res.status(500).json({ message: "Error fetching users", error: err });
   }
 };
+
 // Block a user by setting a flag
 exports.blockUser = async (req, res) => {
   const { userId } = req.params;
@@ -81,8 +84,11 @@ exports.editCloth = async (req, res) => {
   const { clothId } = req.params;
   const updatedData = req.body;
   try {
-    const updatedCloth = await Cloth.findByIdAndUpdate(clothId, updatedData, { new: true });
-    if (!updatedCloth) return res.status(404).json({ message: "Cloth not found" });
+    const updatedCloth = await Cloth.findByIdAndUpdate(clothId, updatedData, {
+      new: true,
+    });
+    if (!updatedCloth)
+      return res.status(404).json({ message: "Cloth not found" });
     res.status(200).json({ message: "Cloth updated", cloth: updatedCloth });
   } catch (err) {
     res.status(500).json({ message: "Error updating cloth", error: err });
@@ -94,9 +100,9 @@ exports.deleteCloth = async (req, res) => {
   const { clothId } = req.params;
   try {
     const deletedCloth = await Cloth.findByIdAndDelete(clothId);
-    if (!deletedCloth) return res.status(404).json({ message: "Cloth not found" });
+    if (!deletedCloth)
+      return res.status(404).json({ message: "Cloth not found" });
 
-    // Also remove reference from User.tailorDetails.cloths
     await User.updateMany(
       { "tailorDetails.cloths": clothId },
       { $pull: { "tailorDetails.cloths": clothId } }
@@ -111,8 +117,8 @@ exports.deleteCloth = async (req, res) => {
 exports.getAllOrders = async (req, res) => {
   try {
     const orders = await Order.find()
-      .populate("user", "name email") 
-      .populate("items.product", "name price"); 
+      .populate("user", "name email")
+      .populate("items.product", "name price");
 
     res.status(200).json(orders);
   } catch (error) {
@@ -121,7 +127,6 @@ exports.getAllOrders = async (req, res) => {
   }
 };
 
-// Update delivery status of an order
 // Update delivery status of an order
 exports.updateOrderStatus = async (req, res) => {
   const { orderId } = req.params;
@@ -140,7 +145,6 @@ exports.updateOrderStatus = async (req, res) => {
   }
 
   try {
-    // If status is "Delivered", set deliveredAt date
     const updateData = {
       deliveryStatus,
     };
@@ -149,11 +153,9 @@ exports.updateOrderStatus = async (req, res) => {
       updateData.deliveredAt = new Date();
     }
 
-    const updatedOrder = await Order.findByIdAndUpdate(
-      orderId,
-      updateData,
-      { new: true }
-    )
+    const updatedOrder = await Order.findByIdAndUpdate(orderId, updateData, {
+      new: true,
+    })
       .populate("user", "name email")
       .populate("items.product", "name price");
 
@@ -170,5 +172,3 @@ exports.updateOrderStatus = async (req, res) => {
     res.status(500).json({ message: "Failed to update delivery status" });
   }
 };
-
-

@@ -19,11 +19,11 @@ const measurementSchema = new mongoose.Schema({
   bust: Number,
   topLength: Number,
 
-  // Female Bottom – values reused from male
+  
 }, { _id: false });
 
 const customRequestSchema = new mongoose.Schema({
-  image:  String, // image filename or URL
+  image:  String, 
   measurements: { type: measurementSchema, required: true },
   gender: { type: String, enum: ["Male", "Female", "Other"], required: true },
   budget: { type: Number, required: true },

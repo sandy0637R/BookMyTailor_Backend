@@ -10,7 +10,7 @@ const {
   createPostImageUpload,
 } = require("../middleware/multerConfig");
 
-// Multer middleware setup
+// <!========= Multer middleware setup =========!>
 const uploadImage = createProfileImageUpload();
 const uploadPostImages = createPostImageUpload();
 
@@ -153,6 +153,7 @@ module.exports.getProfile = async function (req, res) {
   }
 };
 
+//Get User by ID
 exports.getUserById = async (req, res) => {
   try {
     const user = await userModel
@@ -165,8 +166,7 @@ exports.getUserById = async (req, res) => {
   }
 };
 
-// Update Profile with optional image upload
-// Update Profile (only touch roles and tailorDetails logic)
+//Update Priofile
 module.exports.updateProfile = async function (req, res) {
   try {
     const userId = req.user._id;
@@ -176,7 +176,6 @@ module.exports.updateProfile = async function (req, res) {
 
     if (!user.roles) user.roles = ["customer"];
 
-    // ✅ Fix: Ensure tailorDetails added only when all fields are valid
     const incomingRoles = (updates.roles || updates.role || []).map((r) =>
       r.toLowerCase()
     );
@@ -190,7 +189,7 @@ module.exports.updateProfile = async function (req, res) {
           specialization,
           fees,
           description,
-          createdAt: new Date(), // ✅ Added timestamp on tailor creation
+          createdAt: new Date(),
         };
         user.roles.push("tailor");
       } else {
@@ -208,17 +207,15 @@ module.exports.updateProfile = async function (req, res) {
     }
 
     Object.keys(updates).forEach((key) => {
-  if (!["roles", "tailorDetails"].includes(key)) {
-    user[key] = updates[key];
-  }
-});
+      if (!["roles", "tailorDetails"].includes(key)) {
+        user[key] = updates[key];
+      }
+    });
 
-    // ✅ Save uploaded profile image if exists
     if (req.file) {
       user.profileImage = req.file.path;
     }
 
-    // ✅ Don't touch other fields (profileImage, name, email, address etc.)
     await user.save();
 
     res.status(200).json({
@@ -268,7 +265,7 @@ module.exports.checkAdmin = async function (req, res) {
   }
 };
 
-// Post-related controllers
+// <!=============== Post-related controllers ===============!>
 
 // Add Post
 module.exports.addPost = async function (req, res) {
@@ -276,7 +273,6 @@ module.exports.addPost = async function (req, res) {
     const userId = req.user._id;
     const postData = req.body;
 
-    // Pass full file objects, not only paths
     const images = req.files && req.files.length > 0 ? req.files : [];
 
     const result = await postService.addPost(userId, postData, images);
@@ -293,8 +289,6 @@ module.exports.updatePost = async function (req, res) {
     const userId = req.user._id;
     const postId = req.params.postId;
     const updateData = req.body;
-
-    // Pass full file objects, not only paths
     const images = req.files && req.files.length > 0 ? req.files : [];
 
     const result = await postService.updatePost(
@@ -310,6 +304,7 @@ module.exports.updatePost = async function (req, res) {
   }
 };
 
+//Delete Post
 module.exports.deletePost = async function (req, res) {
   try {
     const userId = req.user._id;
@@ -322,6 +317,7 @@ module.exports.deletePost = async function (req, res) {
   }
 };
 
+//Get All Posts
 module.exports.getAllPosts = async function (req, res) {
   try {
     const userId = req.user._id;
@@ -332,6 +328,8 @@ module.exports.getAllPosts = async function (req, res) {
     res.status(500).send("Server error");
   }
 };
+
+//<!========= Order Related Controllers =========!>
 
 exports.addToWishlist = async (req, res) => {
   try {
@@ -351,13 +349,11 @@ exports.addToWishlist = async (req, res) => {
     user.wishlist.push(itemId);
     await user.save();
 
-    res
-      .status(200)
-      .json({
-        success: true,
-        message: "Item added to wishlist",
-        wishlist: user.wishlist,
-      });
+    res.status(200).json({
+      success: true,
+      message: "Item added to wishlist",
+      wishlist: user.wishlist,
+    });
   } catch (err) {
     console.error("Error in addToWishlist:", err);
     res.status(500).json({ message: "Internal Server Error" });
@@ -395,13 +391,11 @@ exports.addToCart = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Safely find existing item in cart
     const existingItem = user.cart.find(
       (entry) => entry.item && entry.item.toString() === itemId
     );
 
     if (existingItem) {
-      // If item already in cart → increase quantity
       await userModel.updateOne(
         { _id: req.user._id, "cart.item": itemId },
         {
@@ -410,7 +404,6 @@ exports.addToCart = async (req, res) => {
         }
       );
     } else {
-      // If item not in cart → push new item
       await userModel.updateOne(
         { _id: req.user._id },
         {
@@ -422,7 +415,7 @@ exports.addToCart = async (req, res) => {
 
     const updatedUser = await userModel
       .findById(req.user._id)
-      .populate("cart.item") // Consider populating the item details
+      .populate("cart.item")
       .populate("wishlist");
 
     res.status(200).json({
@@ -464,38 +457,30 @@ exports.removeFromCart = async (req, res) => {
   }
 };
 
-// exports.getUserCart = async (req, res) => {
-//   try {
-//     const userId = req.params.id;
-//     const user = await User.findById(userId).populate('cart.item');
-
-//     if (!user) return res.status(404).json({ message: "User not found" });
-
-//     res.status(200).json({ cart: user.cart });
-//   } catch (error) {
-//     res.status(500).json({ message: "Server error", error });
-//   }
-// };
-
 exports.clearUserCart = async (req, res) => {
   try {
     const userId = req.params.id;
 
-    // Check if logged-in user matches the user being modified or is an admin
-    if (req.user._id.toString() !== userId && !req.user.roles.includes("admin")) {
+    if (
+      req.user._id.toString() !== userId &&
+      !req.user.roles.includes("admin")
+    ) {
       return res.status(403).json({ message: "Unauthorized access." });
     }
 
     const user = await userModel.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    user.cart = []; // Clear the cart
+    user.cart = [];
     await user.save();
 
-    res.status(200).json({ message: "Cart cleared successfully", cart: user.cart });
+    res
+      .status(200)
+      .json({ message: "Cart cleared successfully", cart: user.cart });
   } catch (error) {
     console.error("Error clearing cart:", error);
-    res.status(500).json({ message: "Failed to clear cart", error: error.message });
+    res
+      .status(500)
+      .json({ message: "Failed to clear cart", error: error.message });
   }
 };
-

@@ -20,7 +20,6 @@ const PostSchema = new mongoose.Schema({
   hashtags: [{ type: String }],
   createdAt: { type: Date, default: Date.now },
 
-  // ✅ NEW: Posted by tailor
   postedBy: {
     _id: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     name: { type: String },

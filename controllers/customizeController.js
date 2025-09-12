@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 const fs = require("fs");
 const path = require("path");
 
-// 🧵 1. Customer: Create a custom dress request
+//  1. Customer: Create a custom dress request
 exports.createCustomRequest = async (req, res) => {
   try {
     const userId = req.user._id;
@@ -13,16 +13,15 @@ exports.createCustomRequest = async (req, res) => {
       budget,
       duration,
       description,
-      quantity, 
+      quantity,
       tailorId,
     } = req.body;
 
     const image = req.file?.filename;
-    if ( !measurements || !gender || !budget || !duration) {
+    if (!measurements || !gender || !budget || !duration) {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
-    // ✅ Check if duration is at least 72 hours ahead
     const now = new Date();
     const selectedDate = new Date(duration);
     const diffHours = (selectedDate - now) / (1000 * 60 * 60);
@@ -55,8 +54,7 @@ exports.createCustomRequest = async (req, res) => {
   }
 };
 
-
-// 🧵 2. Tailor: View all uploaded custom requests
+// 2. Tailor: View all uploaded custom requests
 exports.getAllCustomRequests = async (req, res) => {
   try {
     const users = await userModel.find().select("name customDressRequests");
@@ -81,9 +79,7 @@ exports.getAllCustomRequests = async (req, res) => {
   }
 };
 
-
-// 🧵 3. Tailor: Accept a request
-// 🧵 3. Tailor: Accept a request
+//  3. Tailor: Accept a request
 exports.acceptCustomRequest = async (req, res) => {
   try {
     const tailorId = req.user._id;
@@ -109,7 +105,6 @@ exports.acceptCustomRequest = async (req, res) => {
     request.status = "Accepted";
     request.tailorId = tailorId;
 
-    // ✅ Add acceptedAt timestamp here
     request.acceptedAt = new Date();
 
     tailor.tailorDetails.acceptedRequests.push({
@@ -127,8 +122,7 @@ exports.acceptCustomRequest = async (req, res) => {
   }
 };
 
-
-// 🧵 4. Tailor: Update tracking status
+// 4. Tailor: Update tracking status
 exports.updateRequestStatus = async (req, res) => {
   try {
     const tailorId = req.user._id;
@@ -154,13 +148,11 @@ exports.updateRequestStatus = async (req, res) => {
     request.status = status;
     accepted.status = status;
 
-    // ✅ Store delivered date if not already set
     if (status === "Delivered" && !request.deliveredAt) {
-  const deliveredDate = new Date();
-  request.deliveredAt = deliveredDate;
-  accepted.deliveredAt = deliveredDate; // ✅ Add this line
-}
-
+      const deliveredDate = new Date();
+      request.deliveredAt = deliveredDate;
+      accepted.deliveredAt = deliveredDate;
+    }
 
     await customer.save();
     await tailor.save();
@@ -172,8 +164,7 @@ exports.updateRequestStatus = async (req, res) => {
   }
 };
 
-
-// 🧵 5. Customer: Confirm delivery
+//  5. Customer: Confirm delivery
 exports.confirmDelivery = async (req, res) => {
   try {
     const userId = req.user._id;
@@ -188,7 +179,6 @@ exports.confirmDelivery = async (req, res) => {
 
     request.status = "Confirmed";
 
-    // ✅ Also push to customHistory
     const alreadyInHistory = user.customHistory.some(
       (r) => r._id.toString() === request._id.toString()
     );
@@ -197,7 +187,6 @@ exports.confirmDelivery = async (req, res) => {
       user.customHistory.push(request.toObject());
     }
 
-    // ✅ Update tailor side too
     const tailor = await userModel.findById(request.tailorId);
     const accepted = tailor?.tailorDetails?.acceptedRequests.find(
       (r) => r.requestId.toString() === requestId
@@ -214,8 +203,7 @@ exports.confirmDelivery = async (req, res) => {
   }
 };
 
-
-// 🧵 6. Customer: Edit a custom request before it's accepted
+//  6. Customer: Edit a custom request before it's accepted
 exports.editCustomRequest = async (req, res) => {
   try {
     const userId = req.user._id;
@@ -233,7 +221,7 @@ exports.editCustomRequest = async (req, res) => {
         .json({ message: "Can't edit after request is accepted" });
     }
 
-    // 🔥 Delete old image if new one is uploaded
+    //  Delete old image if new one is uploaded
     if (newImage && request.image) {
       const oldPath = path.join(
         __dirname,
@@ -246,7 +234,7 @@ exports.editCustomRequest = async (req, res) => {
       request.image = newImage;
     }
 
-    // 🛠️ Parse measurements if it's a string
+    //  Parse measurements if it's a string
     if (updates.measurements && typeof updates.measurements === "string") {
       try {
         updates.measurements = JSON.parse(updates.measurements);
@@ -255,25 +243,25 @@ exports.editCustomRequest = async (req, res) => {
       }
     }
 
-    // ✅ Optional: check if updated duration is valid
     if (updates.duration) {
       const now = new Date();
       const selected = new Date(updates.duration);
       const diffHrs = (selected - now) / (1000 * 60 * 60);
       if (diffHrs < 72) {
         return res.status(400).json({
-          message: "Updated duration must be at least 3 days (72 hours) from now.",
+          message:
+            "Updated duration must be at least 3 days (72 hours) from now.",
         });
       }
     }
 
-    // 🧠 Update allowed fields
+    // Update allowed fields
     Object.keys(updates).forEach((key) => {
       if (key !== "status" && key !== "tailorId" && key in request) {
         request[key] = updates[key];
       }
     });
-     if ("tailorId" in updates) {
+    if ("tailorId" in updates) {
       request.tailorId = updates.tailorId || null;
     }
 
@@ -285,8 +273,7 @@ exports.editCustomRequest = async (req, res) => {
   }
 };
 
-
-// 🧵 7. Customer: Delete a custom request before it's accepted
+//  7. Customer: Delete a custom request before it's accepted
 exports.deleteCustomRequest = async (req, res) => {
   try {
     const userId = req.user._id;
@@ -297,16 +284,13 @@ exports.deleteCustomRequest = async (req, res) => {
 
     if (!request) return res.status(404).json({ message: "Request not found" });
 
-    // ✅ Allow delete if status is either Uploaded or Confirmed
     if (!["Uploaded", "Confirmed"].includes(request.status)) {
-      return res
-        .status(400)
-        .json({
-          message: "Only 'Uploaded' or 'Confirmed' requests can be deleted",
-        });
+      return res.status(400).json({
+        message: "Only 'Uploaded' or 'Confirmed' requests can be deleted",
+      });
     }
 
-    // 🧹 Delete image from storage
+    //  Delete image from storage
     if (request.image) {
       const imgPath = path.join(
         __dirname,
@@ -318,7 +302,6 @@ exports.deleteCustomRequest = async (req, res) => {
       });
     }
 
-    // ✅ Use pull to remove from array
     user.customDressRequests.pull({ _id: requestId });
     await user.save();
 
@@ -329,8 +312,7 @@ exports.deleteCustomRequest = async (req, res) => {
   }
 };
 
-
-// 🧵 8. Tailor: Get only their accepted custom requests
+//  8. Tailor: Get only their accepted custom requests
 exports.getAcceptedRequests = async (req, res) => {
   try {
     const tailorId = req.user._id;
@@ -347,7 +329,7 @@ exports.getAcceptedRequests = async (req, res) => {
         const customer = await userModel.findById(entry.customerId);
         const request = customer?.customDressRequests?.id(entry.requestId);
 
-        if (!request || request.status === "Confirmed") return null; // ⛔️ Skip confirmed ones
+        if (!request || request.status === "Confirmed") return null;
 
         return {
           ...request.toObject(),
@@ -368,9 +350,7 @@ exports.getAcceptedRequests = async (req, res) => {
   }
 };
 
-
-
-// ✅ Allow tailor to delete request once it's marked as "Delivered"
+//  Allow tailor to delete request once it's marked as "Delivered"
 exports.deleteTailorDeliveredRequest = async (req, res) => {
   try {
     const { userId, requestId } = req.params;
@@ -384,12 +364,18 @@ exports.deleteTailorDeliveredRequest = async (req, res) => {
     // Find and remove the delivered request by requestId and customerId
     const updatedAccepted = tailor.tailorDetails.acceptedRequests.filter(
       (r) =>
-        !(r.requestId.toString() === requestId && r.customerId.toString() === userId)
+        !(
+          r.requestId.toString() === requestId &&
+          r.customerId.toString() === userId
+        )
     );
 
-    // If nothing was removed, return 404
-    if (updatedAccepted.length === tailor.tailorDetails.acceptedRequests.length) {
-      return res.status(404).json({ message: "Request not found or already removed" });
+    if (
+      updatedAccepted.length === tailor.tailorDetails.acceptedRequests.length
+    ) {
+      return res
+        .status(404)
+        .json({ message: "Request not found or already removed" });
     }
 
     tailor.tailorDetails.acceptedRequests = updatedAccepted;
@@ -402,15 +388,14 @@ exports.deleteTailorDeliveredRequest = async (req, res) => {
   }
 };
 
-
-
-// 🧵 9. Customer: Get archived (history) requests
+// 9. Customer: Get archived (history) requests
 exports.getRequestHistory = async (req, res) => {
   try {
     const currentUser = await userModel.findById(req.user._id);
-    if (!currentUser) return res.status(404).json({ message: "User not found" });
+    if (!currentUser)
+      return res.status(404).json({ message: "User not found" });
 
-    // 🧵 Tailor: Fetch histories from customers they worked with
+    //  Tailor: Fetch histories from customers they worked with
     if (currentUser.roles.includes("tailor")) {
       const tailorAccepted = currentUser.tailorDetails?.acceptedRequests || [];
 
@@ -425,7 +410,7 @@ exports.getRequestHistory = async (req, res) => {
           if (!history) return null;
 
           return {
-            ...history.toObject?.() || history,
+            ...(history.toObject?.() || history),
             customer: {
               name: customer.name,
               userId: customer._id,
@@ -438,15 +423,14 @@ exports.getRequestHistory = async (req, res) => {
       return res.status(200).json(filtered);
     }
 
-    // 🧍 Customer: Return own history
     return res.status(200).json(currentUser.customHistory || []);
   } catch (err) {
     console.error("getRequestHistory error:", err);
     res.status(500).json({ message: "Server error" });
   }
 };
- 
-// 🧵 2b. Tailor: View direct custom requests sent to them
+
+// Tailor: View direct custom requests sent to them
 exports.getDirectRequestsForTailor = async (req, res) => {
   try {
     const tailorId = req.user._id;

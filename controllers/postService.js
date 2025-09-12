@@ -3,8 +3,7 @@ const mongoose = require("mongoose");
 const fs = require("fs");
 const path = require("path");
 
-
-const SERVER_URL = process.env.SERVER_URL || "http://localhost:5000"; // Use env variable for global server URL
+const SERVER_URL = process.env.SERVER_URL || "http://localhost:5000";
 
 async function addPost(userId, postData, images = []) {
   const user = await User.findById(userId);
@@ -25,7 +24,6 @@ async function addPost(userId, postData, images = []) {
     name: user.name,
   };
 
-  // ✅ Add productLink support (optional)
   if (typeof postData.productLink !== "undefined") {
     postData.productLink = postData.productLink;
   }
@@ -36,7 +34,6 @@ async function addPost(userId, postData, images = []) {
   return user.tailorDetails.posts[user.tailorDetails.posts.length - 1];
 }
 
-
 async function updatePost(userId, postId, updatedData, images = []) {
   const user = await User.findById(userId);
   if (!user) throw new Error("User not found");
@@ -45,7 +42,6 @@ async function updatePost(userId, postId, updatedData, images = []) {
   if (!post) throw new Error("Post not found");
 
   if (Array.isArray(images) && images.length > 0) {
-    // ✅ Delete old images
     post.images?.forEach((imageUrl) => {
       const filePath = path.join(
         __dirname,
@@ -73,9 +69,6 @@ async function updatePost(userId, postId, updatedData, images = []) {
   return post;
 }
 
-
-
-
 async function deletePost(userId, postId) {
   if (!mongoose.Types.ObjectId.isValid(postId)) {
     throw new Error("Invalid Post ID");
@@ -90,7 +83,6 @@ async function deletePost(userId, postId) {
   const post = user.tailorDetails.posts.id(postId);
   if (!post) throw new Error("Post not found");
 
-  // ✅ Delete images from filesystem
   post.images?.forEach((imageUrl) => {
     const filePath = path.join(
       __dirname,
@@ -106,7 +98,6 @@ async function deletePost(userId, postId) {
   await user.save();
   return true;
 }
-
 
 async function getAllPosts(userId) {
   const user = await User.findById(userId);
@@ -124,28 +115,19 @@ async function toggleLike(userId, postId) {
   const post = user.tailorDetails.posts.id(postId);
   if (!post) throw new Error("Post not found");
 
-  // Make sure userId and like ids are strings before comparison
   const likeIndex = post.likes.findIndex(
     (id) => id.toString() === userId.toString()
   );
 
   if (likeIndex === -1) {
-    // Add like
     post.likes.push(userId);
   } else {
-    // Remove like
     post.likes.splice(likeIndex, 1);
   }
 
   await user.save();
   return post;
 }
-
-
-
-
-// Add comment to a post
-
 
 async function addComment(userId, postId, text) {
   const user = await User.findById(userId);
@@ -170,11 +152,10 @@ async function addComment(userId, postId, text) {
   return {
     comment: {
       ...comment,
-      userName: user.name, // Attach user's name manually
+      userName: user.name,
     },
   };
 }
-
 
 // Get all comments for a post
 async function getAllComments(postId) {
@@ -200,37 +181,36 @@ async function getAllComments(postId) {
   return populatedComments;
 }
 
-
 // Delete a comment by commentId
 async function deleteComment(postId, commentId, userId) {
-  // 1. Find user with tailorDetails & posts
   const user = await User.findOne({ "tailorDetails.posts._id": postId });
-  if (!user || !user.tailorDetails) throw new Error("Post not found or tailor details missing");
+  if (!user || !user.tailorDetails)
+    throw new Error("Post not found or tailor details missing");
 
-  // 2. Find post by id safely
   const post = user.tailorDetails.posts.id(postId);
   if (!post) throw new Error("Post not found");
 
-  // 3. Find comment by id safely
   const comment = post.comments.id(commentId);
   if (!comment) throw new Error("Comment not found");
 
-  // 4. Check ownership
   if (comment.userId.toString() !== userId.toString()) {
     throw new Error("Not authorized to delete this comment");
   }
 
-  // 5. Await deleteOne to ensure deletion completes
   await comment.deleteOne();
 
-  // 6. Save user document after removal
   await user.save();
 
   return true;
 }
 
-
 module.exports = {
-  addPost, updatePost, deletePost, getAllPosts, toggleLike, addComment,
-  getAllComments, deleteComment,
+  addPost,
+  updatePost,
+  deletePost,
+  getAllPosts,
+  toggleLike,
+  addComment,
+  getAllComments,
+  deleteComment,
 };

@@ -4,17 +4,19 @@ const fs = require("fs");
 
 exports.getAllCloths = async (req, res) => {
   try {
-    const cloths = await Cloth.find().populate("tailor", "name"); // 👈 Add this
+    const cloths = await Cloth.find().populate("tailor", "name");
     res.status(200).json(cloths);
   } catch (error) {
     res.status(500).json({ message: "Error fetching cloths", error });
   }
 };
 
-
 exports.getClothById = async (req, res) => {
   try {
-    const cloth = await Cloth.findById(req.params.id).populate("tailor", "name"); // 👈 Add this
+    const cloth = await Cloth.findById(req.params.id).populate(
+      "tailor",
+      "name"
+    );
     if (!cloth) {
       return res.status(404).json({ message: "Cloth not found" });
     }
@@ -32,8 +34,11 @@ exports.addCloth = async (req, res) => {
       return res.status(403).json({ message: "Only tailors can add clothes." });
     }
 
-    const imagePath = req.file ? `/uploads/clothImages/${req.file.filename}` : null;
-    if (!imagePath) return res.status(400).json({ message: "Image is required." });
+    const imagePath = req.file
+      ? `/uploads/clothImages/${req.file.filename}`
+      : null;
+    if (!imagePath)
+      return res.status(400).json({ message: "Image is required." });
 
     const newCloth = new Cloth({
       name,
@@ -47,9 +52,13 @@ exports.addCloth = async (req, res) => {
     });
 
     await newCloth.save();
-    res.status(201).json({ message: "Cloth added successfully", cloth: newCloth });
+    res
+      .status(201)
+      .json({ message: "Cloth added successfully", cloth: newCloth });
   } catch (error) {
-    res.status(500).json({ message: "Error adding cloth", error: error.message });
+    res
+      .status(500)
+      .json({ message: "Error adding cloth", error: error.message });
   }
 };
 
@@ -57,8 +66,13 @@ exports.updateCloth = async (req, res) => {
   try {
     const { id } = req.params;
 
-    if (!req.user || (!req.user.roles.includes("tailor") && !req.user.roles.includes("admin"))) {
-      return res.status(403).json({ message: "Only tailors or admins can update clothes." });
+    if (
+      !req.user ||
+      (!req.user.roles.includes("tailor") && !req.user.roles.includes("admin"))
+    ) {
+      return res
+        .status(403)
+        .json({ message: "Only tailors or admins can update clothes." });
     }
 
     const existingCloth = await Cloth.findById(id);
@@ -78,20 +92,28 @@ exports.updateCloth = async (req, res) => {
       image: updatedImagePath,
     };
 
-    const updatedCloth = await Cloth.findByIdAndUpdate(id, updatedData, { new: true });
+    const updatedCloth = await Cloth.findByIdAndUpdate(id, updatedData, {
+      new: true,
+    });
     res.json({ message: "Cloth updated successfully", cloth: updatedCloth });
   } catch (error) {
-    res.status(500).json({ message: "Error updating cloth", error: error.message });
+    res
+      .status(500)
+      .json({ message: "Error updating cloth", error: error.message });
   }
 };
-
 
 exports.deleteCloth = async (req, res) => {
   try {
     const { id } = req.params;
 
-    if (!req.user || (!req.user.roles.includes("tailor") && !req.user.roles.includes("admin"))) {
-      return res.status(403).json({ message: "Only tailors or admins can delete clothes." });
+    if (
+      !req.user ||
+      (!req.user.roles.includes("tailor") && !req.user.roles.includes("admin"))
+    ) {
+      return res
+        .status(403)
+        .json({ message: "Only tailors or admins can delete clothes." });
     }
 
     const cloth = await Cloth.findById(id);
@@ -103,21 +125,31 @@ exports.deleteCloth = async (req, res) => {
     await Cloth.findByIdAndDelete(id);
     res.json({ message: "Cloth deleted successfully" });
   } catch (error) {
-    res.status(500).json({ message: "Error deleting cloth", error: error.message });
+    res
+      .status(500)
+      .json({ message: "Error deleting cloth", error: error.message });
   }
 };
-
 
 exports.getClothsByTailor = async (req, res) => {
   try {
     if (!req.user || !req.user.roles.includes("tailor")) {
-      return res.status(403).json({ message: "Only tailors can view their clothes." });
+      return res
+        .status(403)
+        .json({ message: "Only tailors can view their clothes." });
     }
 
-    const cloths = await Cloth.find({ tailor: req.user._id }).populate("tailor", "name"); // 👈 Add this
+    const cloths = await Cloth.find({ tailor: req.user._id }).populate(
+      "tailor",
+      "name"
+    );
     res.status(200).json(cloths);
   } catch (error) {
-    res.status(500).json({ message: "Error fetching tailor's clothes", error: error.message });
+    res
+      .status(500)
+      .json({
+        message: "Error fetching tailor's clothes",
+        error: error.message,
+      });
   }
 };
-

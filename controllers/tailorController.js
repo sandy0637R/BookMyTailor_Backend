@@ -1,9 +1,12 @@
 const userModel = require("../models/User");
-const Rating=require("../models/Raiting")
-const {  toggleLike, addComment,
-  getAllComments, deleteComment,} = require("./postService");
+const Rating = require("../models/Raiting");
+const {
+  toggleLike,
+  addComment,
+  getAllComments,
+  deleteComment,
+} = require("./postService");
 const mongoose = require("mongoose");
-
 
 // Example controller logic
 
@@ -29,7 +32,9 @@ exports.getTailorById = async (req, res) => {
         (diff % (1000 * 60 * 60 * 24 * 365)) / (1000 * 60 * 60 * 24)
       );
 
-      tailor.tailorDetails.experience = `${years}yr${years === 1 ? "" : "s"} ${days} day${days !== 1 ? "s" : ""}`;
+      tailor.tailorDetails.experience = `${years}yr${
+        years === 1 ? "" : "s"
+      } ${days} day${days !== 1 ? "s" : ""}`;
     }
 
     const allUserIds = [];
@@ -51,7 +56,7 @@ exports.getTailorById = async (req, res) => {
 
     tailor.tailorDetails.posts = tailor.tailorDetails.posts.map((post) => ({
       ...post,
-      productLink: post.productLink || "", // ✅ include productLink
+      productLink: post.productLink || "",
       postedBy: {
         _id: tailor._id,
         name: tailor.name,
@@ -64,30 +69,28 @@ exports.getTailorById = async (req, res) => {
 
     res.json({ tailor });
   } catch (error) {
-    console.error("❌ Error fetching tailor:", error);
     res.status(500).json({ message: "Server error" });
   }
 };
 
-
-
-
 exports.getAllPosts = async (req, res) => {
   try {
-    const users = await userModel.find().select("name email tailorDetails.posts");
+    const users = await userModel
+      .find()
+      .select("name email tailorDetails.posts");
 
     let allPosts = [];
 
-    users.forEach(user => {
+    users.forEach((user) => {
       const posts = user.tailorDetails?.posts || [];
-      posts.forEach(post => {
+      posts.forEach((post) => {
         allPosts.push({
           ...post.toObject(),
           postedBy: {
             name: user.name,
             email: user.email,
             userId: user._id,
-          }
+          },
         });
       });
     });
@@ -98,17 +101,14 @@ exports.getAllPosts = async (req, res) => {
 
     res.status(200).json(allPosts);
   } catch (err) {
-    console.error("Error fetching all posts:", err);
     res.status(500).json({ message: "Server error" });
   }
 };
 
-
-
 // Controller to toggle like/unlike
 exports.toggleLikeOnPost = async (req, res) => {
   try {
-    const userId = req.user._id;   // from your auth middleware
+    const userId = req.user._id;
     const { postId } = req.params;
 
     const updatedPost = await toggleLike(userId, postId);
@@ -126,17 +126,17 @@ exports.addCommentOnPost = async (req, res) => {
     const { text } = req.body;
 
     if (!text || typeof text !== "string") {
-      return res.status(400).json({ message: "Valid comment text is required" });
+      return res
+        .status(400)
+        .json({ message: "Valid comment text is required" });
     }
 
     const result = await addComment(userId, postId, text);
-    res.status(200).json(result); // ✅ send the exact comment object
+    res.status(200).json(result);
   } catch (err) {
-    console.error("Error in addCommentOnPost:", err);
     res.status(500).json({ message: err.message });
   }
 };
-
 
 exports.getAllCommentsForPost = async (req, res) => {
   try {
@@ -144,7 +144,6 @@ exports.getAllCommentsForPost = async (req, res) => {
     const comments = await getAllComments(postId);
     res.status(200).json(comments);
   } catch (err) {
-    console.error("Error in getAllCommentsForPost:", err);
     res.status(500).json({ message: err.message });
   }
 };
@@ -158,13 +157,9 @@ exports.deleteCommentFromPost = async (req, res) => {
     await deleteComment(postId, commentId, userId);
     res.status(200).json({ message: "Comment deleted successfully" });
   } catch (err) {
-    console.error("Error in deleteCommentFromPost:", err);
     res.status(500).json({ message: err.message });
   }
 };
-
-
-
 
 exports.getAllTailors = async (req, res) => {
   try {
@@ -179,7 +174,7 @@ exports.getAllTailors = async (req, res) => {
   }
 };
 
-// Follow Tailor (updated)
+// Follow Tailor
 exports.followTailor = async (req, res) => {
   const { tailorId } = req.params;
   const { _id: followerId, name: followerName } = req.user;
@@ -196,34 +191,35 @@ exports.followTailor = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Avoid duplicates
-    const alreadyFollowing = tailor.tailorDetails.followers?.some(f => f._id.toString() === followerId.toString());
+    const alreadyFollowing = tailor.tailorDetails.followers?.some(
+      (f) => f._id.toString() === followerId.toString()
+    );
     if (alreadyFollowing) {
       return res.status(400).json({ message: "Already following" });
     }
 
-    // Add to followers
-    tailor.tailorDetails.followers.push({ _id: followerId, name: followerName });
+    tailor.tailorDetails.followers.push({
+      _id: followerId,
+      name: followerName,
+    });
 
-    // Add to follower's following list
     follower.following.push({ _id: tailor._id, name: tailor.name });
 
     await tailor.save();
     await follower.save();
 
-    res.status(200).json({ message: "Followed successfully", followersCount: tailor.tailorDetails.followers.length });
+    res
+      .status(200)
+      .json({
+        message: "Followed successfully",
+        followersCount: tailor.tailorDetails.followers.length,
+      });
   } catch (err) {
-    console.error("Follow Error:", err);
     res.status(500).json({ message: "Server error" });
   }
 };
 
-
-
-
-
 // Unfollow Tailor
-// Unfollow Tailor (updated)
 exports.unfollowTailor = async (req, res) => {
   const { tailorId } = req.params;
   const { _id: followerId } = req.user;
@@ -236,32 +232,26 @@ exports.unfollowTailor = async (req, res) => {
   }
 
   try {
-    // Remove follower from tailor's followers list (array of objects)
     await userModel.findByIdAndUpdate(tailorId, {
-      $pull: { "tailorDetails.followers": { _id: followerId } }
+      $pull: { "tailorDetails.followers": { _id: followerId } },
     });
 
-    // Remove tailor from user's following list (array of ObjectIds)
     await userModel.findByIdAndUpdate(followerId, {
-  $pull: { following: { _id: tailorId } }
-});
+      $pull: { following: { _id: tailorId } },
+    });
 
-
-    // Re-fetch updated followers count
-    const updatedTailor = await userModel.findById(tailorId).select("tailorDetails.followers");
+    const updatedTailor = await userModel
+      .findById(tailorId)
+      .select("tailorDetails.followers");
 
     res.status(200).json({
       message: "Unfollowed successfully",
-      followersCount: updatedTailor?.tailorDetails?.followers?.length || 0
+      followersCount: updatedTailor?.tailorDetails?.followers?.length || 0,
     });
   } catch (err) {
-    console.error("Unfollow Error:", err);
     res.status(500).json({ message: "Server error" });
   }
 };
-
-
-
 
 // Get Followers of Tailor
 exports.getFollowersOfTailor = async (req, res) => {
@@ -272,7 +262,9 @@ exports.getFollowersOfTailor = async (req, res) => {
   }
 
   try {
-    const tailor = await userModel.findById(tailorId).select("tailorDetails.followers");
+    const tailor = await userModel
+      .findById(tailorId)
+      .select("tailorDetails.followers");
 
     if (!tailor || !tailor.tailorDetails) {
       return res.status(404).json({ message: "Tailor not found" });
@@ -280,8 +272,9 @@ exports.getFollowersOfTailor = async (req, res) => {
 
     res.status(200).json({ followers: tailor.tailorDetails.followers || [] });
   } catch (error) {
-    console.error("Get Followers Error:", error);
-    res.status(500).json({ message: "Error fetching followers", error: error.message });
+    res
+      .status(500)
+      .json({ message: "Error fetching followers", error: error.message });
   }
 };
 
@@ -294,7 +287,6 @@ exports.rateTailor = async (req, res) => {
   }
 
   try {
-    // Update if already rated, else insert
     const existing = await Rating.findOne({ tailorId, userId });
 
     if (existing) {
@@ -304,11 +296,10 @@ exports.rateTailor = async (req, res) => {
       await Rating.create({ tailorId, userId, rating });
     }
 
-    // Recalculate average
     const ratings = await Rating.find({ tailorId });
-    const avgRating = ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length;
+    const avgRating =
+      ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length;
 
-    // Save average to tailor document
     await userModel.findByIdAndUpdate(tailorId, {
       "tailorDetails.averageRating": avgRating,
     });
@@ -358,7 +349,6 @@ exports.getFollowingList = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // 🔄 Remove duplicates by _id
     const uniqueFollowing = [];
     const seenIds = new Set();
 
@@ -372,12 +362,9 @@ exports.getFollowingList = async (req, res) => {
 
     res.status(200).json({ following: uniqueFollowing });
   } catch (error) {
-    console.error("Get Following List Error:", error);
     res.status(500).json({ message: "Error fetching following list" });
   }
 };
-
-
 
 exports.getUsersWhoRatedTailor = async (req, res) => {
   const { tailorId } = req.params;
@@ -390,8 +377,8 @@ exports.getUsersWhoRatedTailor = async (req, res) => {
     const ratings = await Rating.find({ tailorId }).populate("userId", "name");
 
     const ratedUsers = ratings
-      .filter(r => r.userId) // ✅ Avoid null users
-      .map(r => ({
+      .filter((r) => r.userId)
+      .map((r) => ({
         _id: r.userId._id,
         name: r.userId.name,
         rating: r.rating,
@@ -399,7 +386,8 @@ exports.getUsersWhoRatedTailor = async (req, res) => {
 
     res.status(200).json({ ratedUsers });
   } catch (error) {
-    console.error("Get Rated Users Error:", error);
-    res.status(500).json({ message: "Error fetching rated users", error: error.message });
+    res
+      .status(500)
+      .json({ message: "Error fetching rated users", error: error.message });
   }
 };
