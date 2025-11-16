@@ -1,5 +1,7 @@
+//Index.js 
+
 const express = require("express");
-const cors = require("cors");  // Import cors
+const cors = require("cors");  
 const app = express();
 const cookieParser = require("cookie-parser");
 const path = require("path");
@@ -19,12 +21,12 @@ const db = require("./config/mongoose-connection");
 require("dotenv").config();
 
 app.use(cors({
-  origin: "http://localhost:5173",  // Your React app's URL
-  methods: ["GET", "POST", "PUT", "DELETE"],  // Allowed HTTP methods
-  credentials: true,  // Allow cookies/credentials to be sent
+  origin: "http://localhost:5173",  
+  methods: ["GET", "POST", "PUT", "DELETE"], 
+  credentials: true,  
 }));
 
-// Skip JSON parsing for GET and DELETE requests to avoid JSON parse errors
+
 app.use((req, res, next) => {
   if (req.method === "GET" || req.method === "DELETE") {
     next();
