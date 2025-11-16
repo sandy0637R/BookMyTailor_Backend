@@ -30,9 +30,6 @@
   },
   "devDependencies": {
     "nodemon": "^3.1.9"
-  },
-  "engines": {
-  "node": "18.x"
-}
+  }
 
 }
